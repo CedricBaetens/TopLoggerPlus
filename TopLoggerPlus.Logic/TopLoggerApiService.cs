@@ -1,8 +1,10 @@
 ﻿using RestSharp;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TopLoggerPlus.Logic.Model;
 
 namespace TopLoggerPlus.Logic
 {
@@ -32,8 +34,6 @@ namespace TopLoggerPlus.Logic
             var response = _client.Get<List<Ascend>>(request);
             return response.Data;
         }
-
-
         public Gym GetGym()
         {
             var request = new RestRequest("gyms/klimax.json", DataFormat.Json);
@@ -42,6 +42,40 @@ namespace TopLoggerPlus.Logic
             var response = _client.Get<Gym>(request);
 
             return response.Data;
+        }
+
+        public List<RouteOverview> GetRouteOverview()
+        {
+            var result = new List<RouteOverview>();
+
+            // Get Data
+            var gym = GetGym();
+            var routes = GetRoutes();
+            var ascends = GetAscends();
+
+            // Get Sectors
+            var walls = gym.walls.Where(x => x.name.ToUpper().Contains("SECTOR")).ToDictionary(x=>x.id);
+            var holds = gym.holds.ToDictionary(x => x.id);
+
+            var routesFilterd = routes
+                .Where(x => walls.ContainsKey(x.wall_id))
+                .ToList();
+
+            foreach (var route in routesFilterd)
+            {
+                var routeOverview = new RouteOverview
+                {
+                    Grade = GradeConvertor(route.grade),
+                    GradeNumber = route.grade,
+                    Rope = route.rope_number,
+                    Climbed = ascends.Select(x => x.climb_id).Contains(route.id),
+                    Color = holds[route.hold_id].brand,
+                    Wall = walls[route.wall_id].name
+                };
+                result.Add(routeOverview);
+
+            }
+            return result;
         }
 
         public string GradeConvertor(string input)
