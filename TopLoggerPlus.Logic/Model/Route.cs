@@ -6,7 +6,16 @@
         public string GradeNumber { get; set; }
         public string Rope { get; set; }
         public string Wall { get; set; }
-        public string Color { get; set; }
-        public bool Climbed { get; set; }
+        public RouteTopType TopType { get; set; }
+        public RouteColor Color { get; set; }
     }
+
+    public enum RouteTopType
+    {
+        NotTopped,
+        OnSight,
+        Flash,
+        RedPoint
+    }
+
 }

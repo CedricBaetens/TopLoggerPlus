@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TopLoggerPlus.ApiWrapper;
 using TopLoggerPlus.Logic.Model;
 
@@ -14,7 +15,7 @@ namespace TopLoggerPlus.Logic
             _topLoggerService = topLoggerService;
         }
 
-        public List<Route> GetRoutes()
+        public async Task<List<Route>> GetRoutes()
         {
             var result = new List<Route>();
 
@@ -38,10 +39,39 @@ namespace TopLoggerPlus.Logic
                     Grade = GradeConvertor(route.grade),
                     GradeNumber = route.grade,
                     Rope = route.rope_number == 0 ? "/" : route.rope_number.ToString(),
-                    Climbed = ascends.Select(x => x.climb_id).Contains(route.id),
-                    Color = holds[route.hold_id].brand,
-                    Wall = walls[route.wall_id].name
+                    Wall = walls[route.wall_id].name,
                 };
+
+                // Ascend
+                var routeAscend = ascends.FirstOrDefault(x => x.climb_id == route.id);
+                if(routeAscend == null)
+                {
+                    routeOverview.TopType = RouteTopType.NotTopped;
+                }
+                else
+                {
+                    switch (routeAscend.checks)
+                    {
+                        case 1:
+                            routeOverview.TopType = RouteTopType.RedPoint;
+                            break;
+                        case 2:
+                            routeOverview.TopType = RouteTopType.Flash;
+                            break;
+                        case 3:
+                            routeOverview.TopType = RouteTopType.OnSight;
+                            break;
+                    }
+                }
+
+                // Color
+                var hold = holds[route.hold_id];
+                routeOverview.Color = new RouteColor()
+                {
+                    Name = hold.brand,
+                    Value = hold.color
+                };
+
                 result.Add(routeOverview);
 
             }

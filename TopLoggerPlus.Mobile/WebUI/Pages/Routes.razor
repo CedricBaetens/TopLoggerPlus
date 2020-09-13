@@ -14,20 +14,33 @@ else
             <tr>
                 <th>Grade</th>
                 <th>Rope</th>
-                <th>Color</th>
                 <th>Wall</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
             @foreach (var route in _routes)
             {
-   
-            <tr style="background-color: @(route.Climbed ? "#def5cb" : "")">
-                <td>@route.Grade</td>
-                <td>@route.Rope</td>
-                <td>@route.Color</td>
-                <td>@route.Wall</td>
-            </tr>
+                <tr style="background-color: @(route.TopType != TopLoggerPlus.Logic.Model.RouteTopType.NotTopped ? "#def5cb" : "")">
+                    <td><span class="fa fa-circle" style="color: @route.Color.Value"></span> @route.Grade</td>
+                    <td>@route.Rope</td>
+                    <td>@route.Wall</td>
+                    @switch (route.TopType)
+                    {
+                        case Logic.Model.RouteTopType.OnSight:
+                            <td>OS</td>
+                            break;
+                        case Logic.Model.RouteTopType.Flash:
+                            <td>FL</td>
+                            break;
+                        case Logic.Model.RouteTopType.RedPoint:
+                            <td>RP</td>
+                            break;
+                        case Logic.Model.RouteTopType.NotTopped:
+                            <td></td>
+                            break;
+                    }
+                </tr>
             }
         </tbody>
     </table>
@@ -37,8 +50,9 @@ else
 
     private List<TopLoggerPlus.Logic.Model.Route> _routes;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        _routes = RouteService.GetRoutes().OrderBy(x => x.GradeNumber).ThenBy(x => x.Rope).ToList();
+        var routes = await RouteService.GetRoutes();
+        _routes = routes.OrderBy(x => x.GradeNumber).ThenBy(x => x.Rope).ToList();
     }
 }
