@@ -15,68 +15,72 @@ namespace TopLoggerPlus.Logic
             _topLoggerService = topLoggerService;
         }
 
-        public async Task<List<Route>> GetRoutes()
+        public async Task<List<Route>> GetRoutesAsync(string userId)
         {
             var result = new List<Route>();
 
-            // Get Data
-            var gym = _topLoggerService.GetGym();
-            var routes = _topLoggerService.GetRoutes();
-            var ascends = _topLoggerService.GetAscends();
+            // Create Tasks
+            var gymTask = _topLoggerService.GetGym("klimax");
+            var routesTask = _topLoggerService.GetRoutes(49);
+            var ascendsTask = _topLoggerService.GetAscends(userId, 49);
 
-            // Get Sectors
-            var walls = gym.walls.Where(x => x.name.ToUpper().Contains("SECTOR")).ToDictionary(x => x.id);
+            // Gym data
+            var gym = await gymTask;
+            var walls = gym.walls.ToDictionary(x => x.id);
             var holds = gym.holds.ToDictionary(x => x.id);
 
-            var routesFilterd = routes
+            // Routes
+            var routesFilterd = (await routesTask)
                 .Where(x => walls.ContainsKey(x.wall_id))
                 .ToList();
 
-            foreach (var route in routesFilterd)
+            // Ascends
+            var ascends = await ascendsTask;
+
+            foreach (var apiRoute in routesFilterd)
             {
-                var routeOverview = new Route
+                var route = new Route
                 {
-                    Grade = GradeConvertor(route.grade),
-                    GradeNumber = route.grade,
-                    Rope = route.rope_number == 0 ? "/" : route.rope_number.ToString(),
-                    Wall = walls[route.wall_id].name,
+                    Grade = GradeConvertor(apiRoute.grade),
+                    GradeNumber = apiRoute.grade,
+                    Rope = apiRoute.rope_number == 0 ? "/" : apiRoute.rope_number.ToString(),
+                    Wall = walls[apiRoute.wall_id].name,
                 };
 
                 // Ascend
-                var routeAscend = ascends.FirstOrDefault(x => x.climb_id == route.id);
-                if(routeAscend == null)
+                var routeAscend = ascends.FirstOrDefault(x => x.climb_id == apiRoute.id);
+                if (routeAscend == null)
                 {
-                    routeOverview.TopType = RouteTopType.NotTopped;
+                    route.TopType = RouteTopType.NotTopped;
                 }
                 else
                 {
                     switch (routeAscend.checks)
                     {
                         case 1:
-                            routeOverview.TopType = RouteTopType.RedPoint;
+                            route.TopType = RouteTopType.RedPoint;
                             break;
                         case 2:
-                            routeOverview.TopType = RouteTopType.Flash;
+                            route.TopType = RouteTopType.Flash;
                             break;
                         case 3:
-                            routeOverview.TopType = RouteTopType.OnSight;
+                            route.TopType = RouteTopType.OnSight;
                             break;
                     }
                 }
 
                 // Color
-                var hold = holds[route.hold_id];
-                routeOverview.Color = new RouteColor()
+                var hold = holds[apiRoute.hold_id];
+                route.Color = new RouteColor()
                 {
                     Name = hold.brand,
                     Value = hold.color
                 };
-
-                result.Add(routeOverview);
-
+                result.Add(route);
             }
             return result;
         }
+
         private string GradeConvertor(string input)
         {
             if (input == "2.0")

@@ -9,7 +9,8 @@
 }
 else
 {
-    <table class="table">
+    <button class="btn btn-primary" @onclick="Refresh"><span class="fa fa-sync-alt"></span> Refresh</button>
+    <table class="table mt-3">
         <thead>
             <tr>
                 <th>Grade</th>
@@ -52,7 +53,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var routes = await RouteService.GetRoutes();
-        _routes = routes.OrderBy(x => x.GradeNumber).ThenBy(x => x.Rope).ToList();
+        await LoadRoutes();
+    }
+
+    private async Task LoadRoutes()
+    {
+        var routes = await RouteService.GetRoutesAsync("9889643268");
+        _routes = routes
+            .Where(x => x.Wall.ToUpper().Contains("SECTOR"))
+            .OrderBy(x => x.GradeNumber).ThenBy(x => x.Rope)
+            .ToList();
+    }
+
+    private async Task Refresh()
+    {
+        _routes = null;
+        await LoadRoutes();
     }
 }

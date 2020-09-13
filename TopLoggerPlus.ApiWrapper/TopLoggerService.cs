@@ -1,5 +1,6 @@
 ﻿using RestSharp;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using TopLoggerPlus.ApiWrapper.Model;
 
 namespace TopLoggerPlus.ApiWrapper
@@ -13,31 +14,32 @@ namespace TopLoggerPlus.ApiWrapper
             _client = new RestClient("https://api.toplogger.nu/v1");
         }
 
-        public List<Route> GetRoutes()
+        public async Task<List<Route>> GetRoutes(int gymId)
         {
-            var request = new RestRequest("gyms/49/climbs.json", DataFormat.Json);
+            var request = new RestRequest($"gyms/{gymId}/climbs.json", DataFormat.Json);
             request.AddQueryParameter("json_params", "{\"filters\":{\"deleted\":false,\"live\":true}}");
 
-            var response = _client.Get<List<Route>>(request);
-            return response.Data;
+            return await _client.GetAsync<List<Route>>(request);
         }
-        public List<Ascend> GetAscends()
+        public async Task<List<Ascend>> GetAscends(string userId, int gymId)
         {
             var request = new RestRequest("ascends.json", DataFormat.Json);
-            request.AddQueryParameter("json_params", "{\"filters\":{\"used\":true,\"user\":{\"uid\":\"9889643268\"},\"climb\":{\"gym_id\":49,\"deleted\":false,\"liv\":true}}}");
+            request.AddQueryParameter("json_params", $"{{\"filters\":{{\"used\":true,\"user\":{{\"uid\":\"{userId}\"}},\"climb\":{{\"gym_id\":{gymId},\"deleted\":false,\"liv\":true}}}}}}");
             request.AddQueryParameter("serialize_checks", "true");
-
-            var response = _client.Get<List<Ascend>>(request);
-            return response.Data;
+            return await _client.GetAsync<List<Ascend>>(request);
         }
-        public Gym GetGym()
+
+        public async Task<Gym> GetGym(string name)
         {
-            var request = new RestRequest("gyms/klimax.json", DataFormat.Json);
+            var request = new RestRequest($"gyms/{name}.json", DataFormat.Json);
             request.AddQueryParameter("json_params", "{\"includes\":[\"holds\",\"walls\",\"setters\"]}");
-
-            var response = _client.Get<Gym>(request);
-
-            return response.Data;
+            return await _client.GetAsync<Gym>(request);
+        }
+        public async Task<List<Gym>> GetGyms()
+        {
+            var request = new RestRequest("gyms.json", DataFormat.Json);
+            request.AddQueryParameter("json_params", "{\"includes\":[\"gym_resources\"]}");
+            return await _client.GetAsync<List<Gym>>(request);
         }
     }
 }
