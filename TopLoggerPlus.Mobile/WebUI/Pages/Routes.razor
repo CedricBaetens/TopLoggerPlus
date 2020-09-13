@@ -1,0 +1,44 @@
+﻿@page "/routes"
+@inject TopLoggerPlus.Logic.RouteService RouteService
+
+<h3>Routes</h3>
+
+@if (_routes == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Grade</th>
+                <th>Rope</th>
+                <th>Color</th>
+                <th>Wall</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var route in _routes)
+            {
+   
+            <tr style="background-color: @(route.Climbed ? "#def5cb" : "")">
+                <td>@route.Grade</td>
+                <td>@route.Rope</td>
+                <td>@route.Color</td>
+                <td>@route.Wall</td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+
+    private List<TopLoggerPlus.Logic.Model.Route> _routes;
+
+    protected override void OnInitialized()
+    {
+        _routes = RouteService.GetRoutes().OrderBy(x => x.GradeNumber).ThenBy(x => x.Rope).ToList();
+    }
+}
