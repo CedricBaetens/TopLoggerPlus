@@ -24,6 +24,7 @@ namespace TopLoggerPlus.Mobile
 
                     // Register app-specific services
                     services.AddTransient<RouteService>();
+                    services.AddTransient<UserService>();
                     services.AddTransient<TopLoggerService>();
                 })
                 .Build();

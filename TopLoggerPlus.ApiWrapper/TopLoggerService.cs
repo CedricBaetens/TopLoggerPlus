@@ -41,5 +41,13 @@ namespace TopLoggerPlus.ApiWrapper
             request.AddQueryParameter("json_params", "{\"includes\":[\"gym_resources\"]}");
             return await _client.GetAsync<List<Gym>>(request);
         }
+
+        public async Task<List<User>> GetUsers(int gymId)
+        {
+            var request = new RestRequest($"gyms/{gymId}/ranked_users.json", DataFormat.Json);
+            request.AddQueryParameter("climbs_type", "routes");
+            request.AddQueryParameter("ranking_type", "grade");
+            return await _client.GetAsync<List<User>>(request);
+        }
     }
 }
