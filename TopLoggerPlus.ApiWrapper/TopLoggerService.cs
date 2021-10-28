@@ -12,6 +12,7 @@ namespace TopLoggerPlus.ApiWrapper
         public TopLoggerService()
         {
             _client = new RestClient("https://api.toplogger.nu/v1");
+            _client.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
         }
 
         public async Task<List<Route>> GetRoutes(int gymId)
