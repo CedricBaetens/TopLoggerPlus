@@ -25,7 +25,7 @@ namespace TopLoggerPlus.ApiWrapper
         public async Task<List<Ascend>> GetAscends(string userId, int gymId)
         {
             var request = new RestRequest("ascends.json", DataFormat.Json);
-            request.AddQueryParameter("json_params", $"{{\"filters\":{{\"used\":true,\"user\":{{\"uid\":\"{userId}\"}},\"climb\":{{\"gym_id\":{gymId},\"deleted\":false,\"liv\":true}}}}}}");
+            request.AddQueryParameter("json_params", $"{{\"filters\":{{\"used\":true,\"user\":{{\"uid\":\"{userId}\"}},\"climb\":{{\"gym_id\":{gymId},\"live\":true}}}}}}");
             request.AddQueryParameter("serialize_checks", "true");
             return await _client.GetAsync<List<Ascend>>(request);
         }

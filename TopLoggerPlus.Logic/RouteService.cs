@@ -41,32 +41,22 @@ namespace TopLoggerPlus.Logic
             {
                 var route = new Route
                 {
+                    Id = apiRoute.id,
                     Grade = GradeConvertor(apiRoute.grade),
                     GradeNumber = apiRoute.grade,
                     Rope = apiRoute.rope_number == 0 ? "/" : apiRoute.rope_number.ToString(),
-                    Wall = walls[apiRoute.wall_id].name,
+                    Wall = walls[apiRoute.wall_id].name
                 };
 
                 // Ascend
-                var routeAscend = ascends.FirstOrDefault(x => x.climb_id == apiRoute.id);
-                if (routeAscend == null)
+                var routeAscends = ascends.Where(x => x.climb_id == apiRoute.id);
+                foreach (var ascend in routeAscends)
                 {
-                    route.TopType = RouteTopType.NotTopped;
-                }
-                else
-                {
-                    switch (routeAscend.checks)
+                    route.Ascends.Add(new Ascend
                     {
-                        case 1:
-                            route.TopType = RouteTopType.RedPoint;
-                            break;
-                        case 2:
-                            route.TopType = RouteTopType.Flash;
-                            break;
-                        case 3:
-                            route.TopType = RouteTopType.OnSight;
-                            break;
-                    }
+                        LoggedAt = ascend.date_logged,
+                        TopType = (RouteTopType)ascend.checks
+                    });
                 }
 
                 // Color
@@ -115,10 +105,8 @@ namespace TopLoggerPlus.Logic
                     Grade = GradeConvertor(apiRoute.grade),
                     GradeNumber = apiRoute.grade,
                     Rope = apiRoute.rope_number == 0 ? "/" : apiRoute.rope_number.ToString(),
-                    Wall = walls[apiRoute.wall_id].name,
-                    TopType = RouteTopType.NotTopped
+                    Wall = walls[apiRoute.wall_id].name
                 };
-
 
                 // Color
                 var hold = holds[apiRoute.hold_id];

@@ -1,25 +1,27 @@
 ﻿@page "/routes"
-@inject TopLoggerPlus.Logic.RouteService RouteService
 @inject TopLoggerPlus.Logic.UserService UserService
+@inject TopLoggerPlus.Logic.RouteService RouteService
+@inject TopLoggerPlus.Logic.StorageService StorageService
 
 <h3>Routes</h3>
 
-@if (_users == null)
+@if (_users == null && _routes == null)
 {
     <p><em>Loading...</em></p>
 }
-else
+
+@if (_users != null)
 {
     <div class="form-group">
         <label>User:</label>
-        <select class="form-control" @bind="_userId">
+        <select class="form-control" @bind="@_userId">
             @foreach (var user in _users)
             {
                 <option value="@user.Id">@user.Name</option>
             }
         </select>
     </div>
-    <button class="btn btn-primary" @onclick="Search">Search</button>
+    <button class="btn btn-primary" @onclick="Refresh">Refresh</button>
 }
 
 
@@ -27,8 +29,8 @@ else
 {
     <div class="mt-3">
         <div>Routes: @_routes.Count</div>
-        <div>Done: @_routes.Count(x => x.TopType != Logic.Model.RouteTopType.NotTopped)</div>
-        <div>Todo: @_routes.Count(x => x.TopType == Logic.Model.RouteTopType.NotTopped)</div>
+        <div>Done: @_routes.Count(x => x.Ascends.Count > 0)</div>
+        <div>Todo: @_routes.Count(x => x.Ascends.Count == 0)</div>
     </div>
     <table class="table mt-3">
         <thead>
@@ -42,24 +44,32 @@ else
         <tbody>
             @foreach (var route in _routes)
             {
-                <tr style="background-color: @(route.TopType != TopLoggerPlus.Logic.Model.RouteTopType.NotTopped ? "#def5cb" : "")">
+                <tr style="background-color: @(route.Ascends.Any() ? "#def5cb" : "")">
                     <td><span class="fa fa-circle" style="color: @route.Color.Value"></span> @route.Grade</td>
                     <td>@route.Rope</td>
                     <td>@route.Wall</td>
-                    @switch (route.TopType)
+                    
+                    @if (route.Ascends.Any())
                     {
-                        case Logic.Model.RouteTopType.OnSight:
-                            <td>OS</td>
-                            break;
-                        case Logic.Model.RouteTopType.Flash:
-                            <td>FL</td>
-                            break;
-                        case Logic.Model.RouteTopType.RedPoint:
-                            <td>RP</td>
-                            break;
-                        case Logic.Model.RouteTopType.NotTopped:
-                            <td></td>
-                            break;
+                        @switch (route.Ascends.Max(a => a.TopType))
+                        {
+                            case Logic.Model.RouteTopType.OnSight:
+                                <td><a class="navbar-brand" href="routedetails/@route.Id">OS@(route.Ascends.Count > 1 ? $"({route.Ascends.Count}x)" : "")</a></td>
+                                break;
+                            case Logic.Model.RouteTopType.Flash:
+                                <td><a class="navbar-brand" href="routedetails/@route.Id">FL@(route.Ascends.Count > 1 ? $"({route.Ascends.Count}x)" : "")</a></td>
+                                break;
+                            case Logic.Model.RouteTopType.RedPoint:
+                                <td><a class="navbar-brand" href="routedetails/@route.Id">RP@(route.Ascends.Count > 1 ? $"({route.Ascends.Count}x)" : "")</a></td>
+                                break;
+                            case Logic.Model.RouteTopType.NotTopped:
+                                <td></td>
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        <td></td>
                     }
                 </tr>
             }
@@ -69,24 +79,29 @@ else
 
 @code {
 
-    private List<TopLoggerPlus.Logic.Model.Route> _routes;
     private List<TopLoggerPlus.Logic.Model.User> _users;
+    private List<TopLoggerPlus.Logic.Model.Route> _routes;
 
     private string _userId;
 
     protected override async Task OnInitializedAsync()
     {
         _users = (await UserService.GetUsers(49)).OrderBy(x => x.Name).ToList();
-        _userId = "9889643268";
+        _userId = await StorageService.ReadUserId();
+        _routes = await StorageService.ReadRoutes();
     }
-
-    private async Task Search()
+    private async Task Refresh()
     {
+        await StorageService.WriteUserId(_userId);
+
         _routes = null;
-        var routes = await RouteService.GetRoutesAsync(_userId);
-        _routes = routes
+
+        var routes = (await RouteService.GetRoutesAsync(_userId))
             .Where(x => x.Wall.ToUpper().Contains("SECTOR"))
             .OrderBy(x => x.GradeNumber).ThenBy(x => x.Rope)
             .ToList();
+        await StorageService.WriteRoutes(routes);
+
+        _routes = routes;
     }
 }

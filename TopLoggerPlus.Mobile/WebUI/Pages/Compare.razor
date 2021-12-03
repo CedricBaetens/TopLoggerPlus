@@ -1,4 +1,4 @@
-﻿@page "/compare"
+@page "/compare"
 @inject TopLoggerPlus.Logic.RouteService RouteService
 @inject TopLoggerPlus.Logic.UserService UserService
 
@@ -51,11 +51,11 @@ else
         <tbody>
             @foreach (var route in _routes)
             {
-                <tr style="background-color: @(route.TopType != TopLoggerPlus.Logic.Model.RouteTopType.NotTopped ? "#def5cb" : "")">
+                <tr style="background-color: @(route.Ascends.Any() ? "#def5cb" : "")">
                     <td><span class="fa fa-circle" style="color: @route.Color.Value"></span> @route.Grade</td>
                     <td>@route.Rope</td>
                     <td>@route.Wall</td>
-                    @switch (route.TopType)
+                    @switch (route.Ascends.Max(a => a.TopType))
                     {
                         case Logic.Model.RouteTopType.OnSight:
                             <td>OS</td>
