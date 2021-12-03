@@ -1,11 +1,8 @@
-﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.MobileBlazorBindings;
 using Microsoft.MobileBlazorBindings.WebView;
 using TopLoggerPlus.ApiWrapper;
 using TopLoggerPlus.Logic;
-using Xamarin.Essentials;
 using Xamarin.Forms;
 
 namespace TopLoggerPlus.Mobile
@@ -25,11 +22,12 @@ namespace TopLoggerPlus.Mobile
                     // Register app-specific services
                     services.AddTransient<RouteService>();
                     services.AddTransient<UserService>();
+                    services.AddTransient<StorageService>();
                     services.AddTransient<TopLoggerService>();
                 })
                 .Build();
 
-            MainPage = new ContentPage { Title = "My Application" };
+            MainPage = new ContentPage { Title = "TopLogger+" };
             host.AddComponent<Main>(parent: MainPage);
         }
 

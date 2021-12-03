@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.0.0
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 16.0.0.0
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Mobile", "TopLoggerPlus.Mobile\TopLoggerPlus.Mobile.csproj", "{425E1B2E-0B03-4DE7-85E9-BD1C0FCBB94B}"
 EndProject
@@ -10,7 +10,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Logic", "TopL
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.ApiWrapper", "TopLoggerPlus.ApiWrapper\TopLoggerPlus.ApiWrapper.csproj", "{2F8CD919-10AE-4DE1-B9AF-CAE9074C2174}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TopLoggerPlus.Mobile.Windows", "TopLoggerPlus.Mobile.Windows\TopLoggerPlus.Mobile.Windows.csproj", "{B8110678-73CB-40C6-AE1C-322C5F343EAA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Mobile.Windows", "TopLoggerPlus.Mobile.Windows\TopLoggerPlus.Mobile.Windows.csproj", "{B8110678-73CB-40C6-AE1C-322C5F343EAA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
