@@ -2,15 +2,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 16.0.0.0
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Mobile", "TopLoggerPlus.Mobile\TopLoggerPlus.Mobile.csproj", "{425E1B2E-0B03-4DE7-85E9-BD1C0FCBB94B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Mobile", "Legacy\TopLoggerPlus.Mobile\TopLoggerPlus.Mobile.csproj", "{425E1B2E-0B03-4DE7-85E9-BD1C0FCBB94B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TopLoggerPlus.Mobile.Android", "TopLoggerPlus.Mobile.Android\TopLoggerPlus.Mobile.Android.csproj", "{A98C8306-D566-46CF-9340-5A749731BC5F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TopLoggerPlus.Mobile.Android", "Legacy\TopLoggerPlus.Mobile.Android\TopLoggerPlus.Mobile.Android.csproj", "{A98C8306-D566-46CF-9340-5A749731BC5F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Logic", "TopLoggerPlus.Logic\TopLoggerPlus.Logic.csproj", "{4F362209-B2ED-4F44-917E-2E37D3FF71B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Logic", "Legacy\TopLoggerPlus.Logic\TopLoggerPlus.Logic.csproj", "{4F362209-B2ED-4F44-917E-2E37D3FF71B3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.ApiWrapper", "TopLoggerPlus.ApiWrapper\TopLoggerPlus.ApiWrapper.csproj", "{2F8CD919-10AE-4DE1-B9AF-CAE9074C2174}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.ApiWrapper", "Legacy\TopLoggerPlus.ApiWrapper\TopLoggerPlus.ApiWrapper.csproj", "{2F8CD919-10AE-4DE1-B9AF-CAE9074C2174}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Mobile.Windows", "TopLoggerPlus.Mobile.Windows\TopLoggerPlus.Mobile.Windows.csproj", "{B8110678-73CB-40C6-AE1C-322C5F343EAA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.Mobile.Windows", "Legacy\TopLoggerPlus.Mobile.Windows\TopLoggerPlus.Mobile.Windows.csproj", "{B8110678-73CB-40C6-AE1C-322C5F343EAA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Legacy", "Legacy", "{ADAA576D-011D-48EF-BA0F-1F9D03833D7E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -139,6 +141,13 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{425E1B2E-0B03-4DE7-85E9-BD1C0FCBB94B} = {ADAA576D-011D-48EF-BA0F-1F9D03833D7E}
+		{A98C8306-D566-46CF-9340-5A749731BC5F} = {ADAA576D-011D-48EF-BA0F-1F9D03833D7E}
+		{4F362209-B2ED-4F44-917E-2E37D3FF71B3} = {ADAA576D-011D-48EF-BA0F-1F9D03833D7E}
+		{2F8CD919-10AE-4DE1-B9AF-CAE9074C2174} = {ADAA576D-011D-48EF-BA0F-1F9D03833D7E}
+		{B8110678-73CB-40C6-AE1C-322C5F343EAA} = {ADAA576D-011D-48EF-BA0F-1F9D03833D7E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AB00E3BB-1C87-40B7-9B60-74B7DB5E592D}
