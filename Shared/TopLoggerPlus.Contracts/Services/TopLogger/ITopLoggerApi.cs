@@ -1,4 +1,4 @@
-﻿namespace TopLoggerPlus.Contracts.Services.TopLoggerApi;
+﻿namespace TopLoggerPlus.Contracts.Services.TopLogger;
 
 public interface ITopLoggerApi
 {
@@ -6,7 +6,7 @@ public interface ITopLoggerApi
     Task<List<Gym>> GetGyms([AliasAs("json_params")] string jsonParams);
 
     [Get("/v1/gyms/{name}.json")]
-    Task<Gym?> GetGymByName(string name, [AliasAs("json_params")] string jsonParams);
+    Task<GymDetails?> GetGymByName(string name, [AliasAs("json_params")] string jsonParams);
     [Get("/v1/gyms/{gymId}/climbs.json")]
     Task<List<Route>> GetRoutes(int gymId, [AliasAs("json_params")] string jsonParams);
     [Get("/v1/gyms/{gymId}/ranked_users.json")]

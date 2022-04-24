@@ -16,6 +16,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddTransient<ITopLoggerService, TopLoggerService>();
         services.AddRefitClient<ITopLoggerApi>()
             .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.toplogger.nu"));
+
+        services.AddTransient<IRouteService, RouteService>();
     })
     .Build();
 

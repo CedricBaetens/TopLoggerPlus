@@ -1,14 +1,14 @@
-﻿namespace TopLoggerPlus.Contracts.Services;
+﻿namespace TopLoggerPlus.Contracts.Services.TopLogger;
 
 public interface ITopLoggerService
 {
     Task<List<Gym>?> GetGyms();
 
-    Task<Gym?> GetGymByName(string name);
-    Task<List<Route>?> GetRoutes(int gymId);
-    Task<List<User>?> GetUsers(int gymId);
+    Task<GymDetails?> GetGymByName(string name);
+    Task<List<Route>> GetRoutes(int gymId);
+    Task<List<User>> GetUsers(int gymId);
 
-    Task<List<Ascend>?> GetAscends(long userUId, int gymId);
+    Task<List<Ascend>> GetAscends(long userUId, int gymId);
 }
 
 public class TopLoggerService : ITopLoggerService
@@ -43,7 +43,7 @@ public class TopLoggerService : ITopLoggerService
         }
     }
 
-    public async Task<Gym?> GetGymByName(string name)
+    public async Task<GymDetails?> GetGymByName(string name)
     {
         try
         {
@@ -63,7 +63,7 @@ public class TopLoggerService : ITopLoggerService
             return null;
         }
     }
-    public async Task<List<Route>?> GetRoutes(int gymId)
+    public async Task<List<Route>> GetRoutes(int gymId)
     {
         try
         {
@@ -75,15 +75,15 @@ public class TopLoggerService : ITopLoggerService
         catch (ApiException apiEx)
         {
             _logger.LogError(apiEx, $"{nameof(GetRoutes)} Error: {apiEx.StatusCode}, {apiEx.ReasonPhrase}");
-            return null;
+            return new List<Route>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"{nameof(GetRoutes)} Exception");
-            return null;
+            return new List<Route>();
         }
     }
-    public async Task<List<User>?> GetUsers(int gymId)
+    public async Task<List<User>> GetUsers(int gymId)
     {
         try
         {
@@ -94,16 +94,16 @@ public class TopLoggerService : ITopLoggerService
         catch (ApiException apiEx)
         {
             _logger.LogError(apiEx, $"{nameof(GetUsers)} Error: {apiEx.StatusCode}, {apiEx.ReasonPhrase}");
-            return null;
+            return new List<User>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"{nameof(GetUsers)} Exception");
-            return null;
+            return new List<User>();
         }
     }
 
-    public async Task<List<Ascend>?> GetAscends(long userUId, int gymId)
+    public async Task<List<Ascend>> GetAscends(long userUId, int gymId)
     {
         try
         {
@@ -115,12 +115,12 @@ public class TopLoggerService : ITopLoggerService
         catch (ApiException apiEx)
         {
             _logger.LogError(apiEx, $"{nameof(GetAscends)} Error: {apiEx.StatusCode}, {apiEx.ReasonPhrase}");
-            return null;
+            return new List<Ascend>();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"{nameof(GetAscends)} Exception");
-            return null;
+            return new List<Ascend>();
         }
     }
 }
