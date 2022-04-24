@@ -13,14 +13,11 @@ public class TestConsoleRunner : BackgroundService
         _lifetime = lifetime;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (_configuration.GetValue<string>("run") != "false")
-            _testService.Run();
-
+            await _testService.Run();
         if (_configuration.GetValue<string>("wait") != "true")
             _lifetime.StopApplication();
-
-        return Task.CompletedTask;
     }
 }
