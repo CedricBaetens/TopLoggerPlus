@@ -27,7 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{10
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "App", "App", "{75AD0613-0CE3-462F-9489-DB08E631109B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TopLoggerPlus.App", "Services\App\TopLoggerPlus.App\TopLoggerPlus.App.csproj", "{69E528E2-1D11-417C-AA0C-FBEDE08CF1C2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TopLoggerPlus.App", "Services\App\TopLoggerPlus.App\TopLoggerPlus.App.csproj", "{69E528E2-1D11-417C-AA0C-FBEDE08CF1C2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
