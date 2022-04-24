@@ -43,4 +43,12 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="Refit.HttpClientFactory" Version="6.3.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\..\Shared\TopLoggerPlus.Contracts\TopLoggerPlus.Contracts.csproj" />
+	</ItemGroup>
+
 </Project>

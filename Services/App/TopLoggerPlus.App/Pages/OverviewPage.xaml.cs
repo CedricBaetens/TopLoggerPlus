@@ -7,9 +7,4 @@ public partial class OverviewPage : ContentPage
 		InitializeComponent();
 		BindingContext = vm;
 	}
-
-    private void OnRouteSelected(object sender, SelectedItemChangedEventArgs e)
-    {
-		var selectedRoute = e.SelectedItem as Route;
-    }
 }

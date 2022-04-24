@@ -4,13 +4,16 @@
              x:Class="TopLoggerPlus.App.Pages.OverviewPage"
              Title="OverviewPage">
 
-    <ListView ItemsSource="{Binding Routes}" ItemSelected="OnRouteSelected">
-        <ListView.ItemTemplate>
-            <DataTemplate>
-                <ViewCell>
-                    <Label Text="{Binding Name}" FontAttributes="Bold" />
-                </ViewCell>
-            </DataTemplate>
-        </ListView.ItemTemplate>
-    </ListView>
+    <VerticalStackLayout>
+        <Button Text="Refresh" Command="{Binding Refresh}"/>        
+        <ListView ItemsSource="{Binding Routes}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <ViewCell>
+                        <Label Text="{Binding .}" FontAttributes="Bold" />
+                    </ViewCell>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </VerticalStackLayout>
 </ContentPage>

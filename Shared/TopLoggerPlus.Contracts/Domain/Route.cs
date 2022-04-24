@@ -9,4 +9,9 @@ public class Route
     public string Wall { get; set; } = null!;
     public RouteColor Color { get; set; } = null!;
     public List<Ascend> Ascends { get; set; } = new List<Ascend>();
+
+    public override string ToString()
+    {
+        return $"{Grade} - Rope {Rope} {Wall} - Ascends: {Ascends.Count}";
+    }
 }

@@ -1,10 +1,13 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace TopLoggerPlus.App.ViewModels;
 
 public class OverviewViewModel : INotifyPropertyChanged
 {
+    private readonly IRouteService _routeService;
+
     private List<Route> _routes;
     public List<Route> Routes
     {
@@ -12,31 +15,36 @@ public class OverviewViewModel : INotifyPropertyChanged
         set
         {
             _routes = value;
-            OnPropertyChanged();
+            OnPropertyChanged(nameof(Routes));
         }
     }
 
-    public OverviewViewModel()
-    {
-        string fileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TopLoggerPlus", "temp.txt");
-        var exists = File.Exists(fileName);
-        if (!exists)
-        {
-            var directory = Path.GetDirectoryName(fileName);
-            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-            File.WriteAllText(fileName, $"Hello World!! {DateTime.Now}");
-        }
-        else
-        {
-            var content = File.ReadAllText(fileName);
-        }
+    public ICommand Refresh => new Command(async () => await RefreshData());
 
-        Fetch();
+    public OverviewViewModel(IRouteService routeService)
+    {
+        //string fileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TopLoggerPlus", "temp.txt");
+        //var exists = File.Exists(fileName);
+        //if (!exists)
+        //{
+        //    var directory = Path.GetDirectoryName(fileName);
+        //    if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+        //    File.WriteAllText(fileName, $"Hello World!! {DateTime.Now}");
+        //}
+        //else
+        //{
+        //    var content = File.ReadAllText(fileName);
+        //}
+
+        _routeService = routeService;
     }
 
-    void Fetch()
+    private async Task RefreshData()
     {
-        Routes = new List<string> { "Item1", "Item2", "Item3" }.Select(r => new Route { Name = r }).ToList();
+        Routes = (await _routeService.GetRoutes("klimax", 5437061749))
+            .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(r => r.GradeNumber).ThenBy(r => r.Rope)
+            .ToList();
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
