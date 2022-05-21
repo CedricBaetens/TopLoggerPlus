@@ -7,11 +7,13 @@ namespace TopLoggerPlus.Contracts.Services;
 public interface IRouteService
 {
     Task<List<Route>?> GetRoutes(string gymName, long userUId);
+    Route? GetRouteById(int routeId);
 }
 
 public class RouteService : IRouteService
 {
     private readonly ITopLoggerService _topLoggerService;
+    private List<Route>? _routes;
 
     public RouteService(ITopLoggerService topLoggerService)
     {
@@ -64,6 +66,7 @@ public class RouteService : IRouteService
             };
             result.Add(route);
         }
+        _routes = result;
         return result;
     }
     private string GradeConvertor(string input)
@@ -103,5 +106,10 @@ public class RouteService : IRouteService
                 break;
         }
         return result;
+    }
+
+    public Route? GetRouteById(int routeId)
+    {
+        return _routes?.FirstOrDefault(r => r.Id == routeId);
     }
 }

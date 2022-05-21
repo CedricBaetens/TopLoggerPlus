@@ -16,14 +16,16 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        builder.Services.AddSingleton<OverviewViewModel>();
-        builder.Services.AddSingleton<OverviewPage>();
+        builder.Services.AddSingleton<AllRoutesViewModel>();
+        builder.Services.AddSingleton<AllRoutesPage>();
+        builder.Services.AddSingleton<ExpiringRoutesPage>();
+        builder.Services.AddSingleton<RouteDetailsViewModel>();
+        builder.Services.AddSingleton<RouteDetailsPage>();
 
-        builder.Services.AddTransient<IRouteService, RouteService>();
+        builder.Services.AddSingleton<IRouteService, RouteService>();
         builder.Services.AddTransient<ITopLoggerService, TopLoggerService>();
         builder.Services.AddRefitClient<ITopLoggerApi>()
             .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.toplogger.nu"));
-
 
         return builder.Build();
     }

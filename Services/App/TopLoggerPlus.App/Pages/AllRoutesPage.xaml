@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
+             x:Class="TopLoggerPlus.App.Pages.AllRoutesPage"
+             Title="All Routes">
+    <ContentPage.Resources>
+        <utils:BackgroundColorConverter x:Key="BackgroundColorConverter"/>
+        <utils:RouteColorConverter x:Key="RouteColorConverter"/>
+    </ContentPage.Resources>
+        
+    <ContentPage.Content>
+        <StackLayout>
+            <ListView ItemsSource="{Binding Routes}" SelectedItem="{Binding SelectedRoute}"
+                  IsPullToRefreshEnabled="True" RefreshCommand="{Binding Refresh}"
+                  IsRefreshing="{Binding IsBusy, Mode=OneWay}" CachingStrategy="RecycleElementAndDataTemplate"
+                  ItemSelected="ListView_ItemSelected">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <HorizontalStackLayout BackgroundColor="{Binding ., Converter={StaticResource BackgroundColorConverter}}">
+                                <Ellipse Fill="{Binding Color.Value, Converter={StaticResource RouteColorConverter}}"
+                                     WidthRequest="15"
+                                     HeightRequest="15"
+                                     HorizontalOptions="Start" />
+                                <Label VerticalOptions="Center" Text="{Binding ., StringFormat=' {0}'}" FontAttributes="Bold" />
+                            </HorizontalStackLayout>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <Button Text="Refresh" Command="{Binding Refresh}" />
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>
