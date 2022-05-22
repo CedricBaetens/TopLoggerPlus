@@ -42,7 +42,8 @@ public class TestService : ITestService
     }
     private async Task RouteServiceTests(string gymName, long userUId)
     {
-        var routes = await _routeService.GetRoutes(gymName, userUId);
+        _routeService.SaveUserInfo(gymName, userUId);
+        var routes = await _routeService.GetRoutes();
         _logger.LogDebug("Routes; {0}", routes);
     }
 }

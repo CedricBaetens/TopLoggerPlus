@@ -6,6 +6,9 @@
     x:Class="TopLoggerPlus.App.AppShell"    
     Title="TopLoggerPlus">
 
+    <FlyoutItem Title="Select User">
+        <ShellContent ContentTemplate="{DataTemplate page:UserSelectPage}" Route="UserSelectPage"/>
+    </FlyoutItem>
     <FlyoutItem Title="All Routes">
         <ShellContent ContentTemplate="{DataTemplate page:AllRoutesPage}" Route="AllRoutesPage"/>
     </FlyoutItem>

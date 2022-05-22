@@ -1,24 +1,30 @@
 ﻿using System.Text.Json;
 using TopLoggerPlus.Contracts.Services.TopLogger;
-using Ascend = TopLoggerPlus.Contracts.Domain.Ascend;
+using Gym = TopLoggerPlus.Contracts.Domain.Gym;
+using User = TopLoggerPlus.Contracts.Domain.User;
 using Route = TopLoggerPlus.Contracts.Domain.Route;
+using Ascend = TopLoggerPlus.Contracts.Domain.Ascend;
 
 namespace TopLoggerPlus.Contracts.Services;
 
 public interface IRouteService
 {
+    Task<List<Gym>> GetGyms();
+    Task<List<User>> GetUsers(int gymId);
+    void SaveUserInfo(string gymName, long userUId);
+
     Task<(List<Route>? routes, DateTime syncTime)> GetRoutes();
     Route? GetRouteById(int routeId);
-
     Task<(List<Route>? routes, DateTime syncTime)> RefreshRoutes();
+
+    void ClearAll();
 }
 
 public class RouteService : IRouteService
 {
-    private readonly string _gymName = "klimax";
-    private readonly long _userUId = 5437061749;
-
     private readonly ITopLoggerService _topLoggerService;
+    private readonly string _gymFile;
+    private readonly string _userFile;
     private readonly string _routesFile;
 
     public RouteService(ITopLoggerService topLoggerService)
@@ -28,7 +34,25 @@ public class RouteService : IRouteService
         var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TopLoggerPlus");
         if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
 
+        _gymFile = Path.Combine(directory, "gym.txt");
+        _userFile = Path.Combine(directory, "user.txt");
         _routesFile = Path.Combine(directory, "routes.json");
+    }
+
+    public async Task<List<Gym>> GetGyms()
+    {
+        var gyms = await _topLoggerService.GetGyms();
+        return gyms?.ConvertAll(g => new Gym { Id = g.Id, Name = g.Name }) ?? new List<Gym>();
+    }
+    public async Task<List<User>> GetUsers(int gymId)
+    {
+        var users = await _topLoggerService.GetUsers(gymId);
+        return users?.ConvertAll(u => new User { Id = u.UId, Name = u.Name }) ?? new List<User>();
+    }
+    public void SaveUserInfo(string gymName, long userUId)
+    {
+        File.WriteAllText(_gymFile, gymName);
+        File.WriteAllText(_userFile, userUId.ToString());
     }
 
     public async Task<(List<Route>? routes, DateTime syncTime)> GetRoutes()
@@ -51,11 +75,18 @@ public class RouteService : IRouteService
 
     public async Task<(List<Route>? routes, DateTime syncTime)> RefreshRoutes()
     {
-        var gymDetails = await _topLoggerService.GetGymByName(_gymName);
+        if (!File.Exists(_gymFile) || !File.Exists(_userFile))
+            return (null, DateTime.Now);
+
+        var gymName = File.ReadAllText(_gymFile);
+        if (!long.TryParse(File.ReadAllText(_userFile), out var userUId))
+            return (null, DateTime.Now);
+
+        var gymDetails = await _topLoggerService.GetGymByName(gymName);
         if (gymDetails == null) return (null, DateTime.Now);
 
         var routesTask = _topLoggerService.GetRoutes(gymDetails.Id);
-        var ascendsTask = _topLoggerService.GetAscends(_userUId, gymDetails.Id);
+        var ascendsTask = _topLoggerService.GetAscends(userUId, gymDetails.Id);
 
         var walls = gymDetails.Walls.ToDictionary(w => w.Id);
         var holds = gymDetails.Holds.ToDictionary(h => h.Id);
@@ -98,5 +129,12 @@ public class RouteService : IRouteService
 
         File.WriteAllText(_routesFile, JsonSerializer.Serialize(result));
         return (result, DateTime.Now);
+    }
+
+    public void ClearAll()
+    {
+        if (File.Exists(_gymFile)) File.Delete(_gymFile);
+        if (File.Exists(_userFile)) File.Delete(_userFile);
+        if (File.Exists(_routesFile)) File.Delete(_userFile);
     }
 }

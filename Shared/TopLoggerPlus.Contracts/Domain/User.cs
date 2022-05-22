@@ -2,6 +2,6 @@
 
 public class User
 {
-    public string Id { get; set; } = null!;
+    public long Id { get; set; }
     public string Name { get; set; } = null!;
 }
