@@ -68,6 +68,8 @@ public class UserSelectViewModel : INotifyPropertyChanged
     }
     private async Task OnGymSelected()
     {
+        if (SelectedGym == null) return;
+
         Users = (await _routeService.GetUsers(SelectedGym.Id)).OrderBy(u => u.Name).ToList();
         SelectedUser = null;
     }
@@ -76,7 +78,7 @@ public class UserSelectViewModel : INotifyPropertyChanged
         if (SelectedGym == null || SelectedUser == null) return;
 
         _routeService.SaveUserInfo(SelectedGym.Name, SelectedUser.Id);
-        //await Shell.Current.GoToAsync(nameof(AllRoutesPage));
+        await Application.Current.MainPage.DisplayAlert("UserInfo Saved", "", "Ok");
     }
 
     public event PropertyChangedEventHandler PropertyChanged;

@@ -16,6 +16,8 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+        builder.Services.AddTransient<AppShellViewModel>();
+
         builder.Services.AddSingleton<UserSelectPage>();
         builder.Services.AddTransient<UserSelectViewModel>();
 

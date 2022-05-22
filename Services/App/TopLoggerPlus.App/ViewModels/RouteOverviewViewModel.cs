@@ -90,6 +90,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
     {
         if (string.IsNullOrEmpty(_filterType) || routes == null)
         {
+            Routes = null;
             await Application.Current.MainPage.DisplayAlert("Route refresh failed", "", "Ok");
             return;
         }

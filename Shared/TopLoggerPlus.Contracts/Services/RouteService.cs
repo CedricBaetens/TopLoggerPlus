@@ -135,6 +135,6 @@ public class RouteService : IRouteService
     {
         if (File.Exists(_gymFile)) File.Delete(_gymFile);
         if (File.Exists(_userFile)) File.Delete(_userFile);
-        if (File.Exists(_routesFile)) File.Delete(_userFile);
+        if (File.Exists(_routesFile)) File.Delete(_routesFile);
     }
 }
