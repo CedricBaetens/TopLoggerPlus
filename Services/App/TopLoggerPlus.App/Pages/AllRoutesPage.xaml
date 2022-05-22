@@ -29,6 +29,7 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
+            <Label HorizontalOptions="Center" Text="{Binding LastSynced, StringFormat='Last Synced: {0:dd/MM/yyyy HH:mm}'}" />
             <Button Text="Refresh" Command="{Binding Refresh}" />
         </StackLayout>
     </ContentPage.Content>
