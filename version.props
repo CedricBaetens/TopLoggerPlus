@@ -1,0 +1,10 @@
+<Project>
+
+  <PropertyGroup>
+    <TopLoggerPlusVersion>1.0.0</TopLoggerPlusVersion>
+
+    <BuildId Condition="'$(BUILD_BUILDID)' == ''">-develop</BuildId>
+    <BuildId Condition="'$(BUILD_BUILDID)' != ''">.$(BUILD_BUILDID)</BuildId>
+  </PropertyGroup>
+
+</Project>

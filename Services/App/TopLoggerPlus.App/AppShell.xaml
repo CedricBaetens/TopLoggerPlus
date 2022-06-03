@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Shell
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:page="clr-namespace:TopLoggerPlus.App.Pages" 
+    x:Class="TopLoggerPlus.App.AppShell"
+    x:Name="MainShell"
+    Title="TopLoggerPlus">
+
+    <ShellContent Title="Select User" ContentTemplate="{DataTemplate page:UserSelectPage}" Route="UserSelectPage" />
+    <ShellContent x:Name="AllRouteShell" Title="All Routes" ContentTemplate="{DataTemplate page:AllRoutesPage}" Route="AllRoutesPage" />
+    <ShellContent Title="Expiring Routes" ContentTemplate="{DataTemplate page:ExpiringRoutesPage}" Route="ExpiringRoutesPage" />
+
+    <MenuItem Text="Clear All" Command="{Binding ClearAll}" />
+</Shell>

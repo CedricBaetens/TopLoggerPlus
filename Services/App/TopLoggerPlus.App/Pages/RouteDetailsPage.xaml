@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
+             x:Class="TopLoggerPlus.App.Pages.RouteDetailsPage"
+             Title="{Binding Route.Grade, StringFormat='RouteDetails Id: {0}'}">
+    
+    <ContentPage.Resources>
+        <utils:RouteColorConverter x:Key="RouteColorConverter"/>
+    </ContentPage.Resources>
+    
+    <ContentPage.Content>
+        <StackLayout>
+            <Label Text="{Binding Route.Rope, StringFormat='Rope: {0}'}"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Start" />
+            <Label Text="{Binding Route.Grade, StringFormat='Grade: {0}'}"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Start" />
+            <Label Text="{Binding Route.Wall, StringFormat='Wall: {0}'}"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Start" />
+            <HorizontalStackLayout>
+                <Label Text="Color: " VerticalOptions="Center" HorizontalOptions="Start" />
+                <Ellipse Fill="{Binding Route.Color.Value, Converter={StaticResource RouteColorConverter}}"
+                    WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" />
+            </HorizontalStackLayout>
+            <Label Text="{Binding Route.Ascends.Count, StringFormat='Ascends: {0}'}"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Start" />
+            <ListView ItemsSource="{Binding Route.Ascends}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <HorizontalStackLayout>
+                                <Label VerticalOptions="Center" Text="{Binding LoggedAt, StringFormat='  - {0:dd/MM/yyyy} '}" />
+                                <Label VerticalOptions="Center" Text="{Binding Age, StringFormat=' ({0:0}d)'}" />
+                                <Label VerticalOptions="Center" Text="{Binding TopType, StringFormat=' {0}'}" />
+                            </HorizontalStackLayout>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <Button Text="Back" Command="{Binding Back}"/>
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>

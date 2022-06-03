@@ -9,6 +9,7 @@ Release/
 .kube*
 TestResult.xml
 *.user
+*.keystore
 
 .terraform
 *.tfvars

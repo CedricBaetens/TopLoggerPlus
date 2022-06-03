@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TopLoggerPlus.TestConsole": {
+      "commandName": "Project",
+      "commandLineArgs": "wait=true"
+    }
+  }
+}
