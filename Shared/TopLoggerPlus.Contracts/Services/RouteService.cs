@@ -171,8 +171,8 @@ public class RouteService : IRouteService
 
         return new RouteCommunityInfo
         {
-            CommunityGrades = string.Join(", ", grades),
-            CommunityStars = string.Join(", ", stars),
+            CommunityGrades = grades.Any() ? string.Join(", ", grades) : "No tops",
+            CommunityStars = stars.Any() ? string.Join(", ", stars) : "No stars",
             Toppers = toppers
         };
     }

@@ -4,31 +4,45 @@
              xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
              x:Class="TopLoggerPlus.App.Pages.RouteDetailsPage"
              Title="{Binding Route}">
-    
+
     <ContentPage.Resources>
         <utils:RouteColorConverter x:Key="RouteColorConverter"/>
+        <utils:NotEmptyListConverter x:Key="NotEmptyListConverter"/>
     </ContentPage.Resources>
     
     <ContentPage.Content>
-        <StackLayout Margin="10,0,0,0">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
             <Label Text="{Binding Route.Rope, StringFormat='Rope: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
+                   VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="0"/>
             <Label Text="{Binding Route.Grade, StringFormat='Grade: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
+                   VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="1"/>
             <Label Text="{Binding Route.Wall, StringFormat='Wall: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <HorizontalStackLayout>
+                   VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="2"/>
+
+            <HorizontalStackLayout Grid.Row="3">
                 <Label Text="Color: " VerticalOptions="Center" HorizontalOptions="Start" />
                 <Ellipse Fill="{Binding Route.Color.Value, Converter={StaticResource RouteColorConverter}}"
                     WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" />
             </HorizontalStackLayout>
-            <Label Text="{Binding Route.Ascends.Count, StringFormat='Ascends: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <ListView ItemsSource="{Binding Route.Ascends}">
+
+            <Label Text="{Binding Route.Ascends.Count, StringFormat='Ascends: {0}'}" Margin="0,20,0,0"
+                   VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="4"/>
+            <ListView ItemsSource="{Binding Route.Ascends}" Grid.Row="5">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <ViewCell>
@@ -41,21 +55,21 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
-            
-            <Label Text="Community Info"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <Label Text="{Binding CommunityInfo.CommunityGrades, StringFormat='Grades: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <Label Text="{Binding CommunityInfo.CommunityStars, StringFormat='Stars: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <ListView ItemsSource="{Binding CommunityInfo.Toppers}"/>
 
-            <Button Text="Back" Command="{Binding Back}" Margin="10" 
-                    BackgroundColor="{StaticResource Primary}" 
-                    TextColor="{StaticResource White}"/>
-        </StackLayout>
+            <Label Text="Community Info" Margin="0,20,0,0"
+                   VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="6"/>
+            <Label Text="{Binding CommunityInfo.CommunityGrades, StringFormat='Grades: {0}'}"
+                    Margin="10,0,0,0" VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="7"/>
+            <Label Text="{Binding CommunityInfo.CommunityStars, StringFormat='Stars: {0}'}"
+                   Margin="10,0,0,0" VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="8"/>
+            <Label Text="Toppers" Margin="10,10,0,0" IsVisible="{Binding CommunityInfo.Toppers, Converter={StaticResource NotEmptyListConverter}}"
+                   VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="9"/>
+            <ListView ItemsSource="{Binding CommunityInfo.Toppers}"
+                   Margin="10,0,0,0" VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="10"/>
+
+            <Button Text="Back" Command="{Binding Back}" Margin="11" 
+                   BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource White}"
+                   VerticalOptions="Center" HorizontalOptions="Start" Grid.Row="11"/>
+        </Grid>
     </ContentPage.Content>
 </ContentPage>
