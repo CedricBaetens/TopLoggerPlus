@@ -4,10 +4,14 @@
              x:Class="TopLoggerPlus.App.Pages.UserSelectPage"
              Title="Select Gym/User">
     <ContentPage.Content>
-        <StackLayout>
+        <StackLayout Padding="10">
             <Picker Title="Select a gym" ItemsSource="{Binding Gyms}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedGym}" SelectedIndexChanged="Picker_SelectedIndexChanged"/>
             <Picker Title="Select a User" ItemsSource="{Binding Users}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedUser}"/>
-            <Button Text="Save" Command="{Binding SaveUserInfo}" />
+            <Button 
+                Text="Save" 
+                Command="{Binding SaveUserInfo}"
+                BackgroundColor="{StaticResource Primary}" 
+                TextColor="{StaticResource White}" />
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>

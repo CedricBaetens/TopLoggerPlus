@@ -10,7 +10,7 @@
     </ContentPage.Resources>
     
     <ContentPage.Content>
-        <StackLayout>
+        <StackLayout Margin="10,0,0,0">
             <Label Text="{Binding Route.Rope, StringFormat='Rope: {0}'}"
                     VerticalOptions="Center" 
                     HorizontalOptions="Start" />
@@ -53,7 +53,9 @@
                     HorizontalOptions="Start" />
             <ListView ItemsSource="{Binding CommunityInfo.Toppers}"/>
 
-            <Button Text="Back" Command="{Binding Back}"/>
+            <Button Text="Back" Command="{Binding Back}" Margin="10" 
+                    BackgroundColor="{StaticResource Primary}" 
+                    TextColor="{StaticResource White}"/>
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>
