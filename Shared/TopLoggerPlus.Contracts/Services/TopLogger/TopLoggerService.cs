@@ -6,9 +6,11 @@ public interface ITopLoggerService
 
     Task<GymDetails?> GetGymByName(string name);
     Task<List<Route>> GetRoutes(int gymId);
+    Task<RouteStats?> GetRouteStats(int gymId, int routeId);
     Task<List<User>> GetUsers(int gymId);
 
     Task<List<Ascend>> GetAscends(long userUId, int gymId);
+    Task<List<Opinion>> GetOpinions(long userUId, int gymId, int? routeId = null);
 }
 
 public class TopLoggerService : ITopLoggerService
@@ -83,6 +85,25 @@ public class TopLoggerService : ITopLoggerService
             return new List<Route>();
         }
     }
+    public async Task<RouteStats?> GetRouteStats(int gymId, int routeId)
+    {
+        try
+        {
+            var response = await _topLoggerApi.GetRouteStats(gymId, routeId);
+            _logger.LogDebug("TopLogger Response {0}", response);
+            return response;
+        }
+        catch (ApiException apiEx)
+        {
+            _logger.LogError(apiEx, $"{nameof(GetRouteStats)} Error: {apiEx.StatusCode}, {apiEx.ReasonPhrase}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"{nameof(GetRouteStats)} Exception");
+            return null;
+        }
+    }
     public async Task<List<User>> GetUsers(int gymId)
     {
         try
@@ -121,6 +142,28 @@ public class TopLoggerService : ITopLoggerService
         {
             _logger.LogError(ex, $"{nameof(GetAscends)} Exception");
             return new List<Ascend>();
+        }
+    }
+    public async Task<List<Opinion>> GetOpinions(long userUId, int gymId, int? routeId = null)
+    {
+        try
+        {
+            var jsonParams = routeId.HasValue
+                ? $"{{\"filters\":{{\"used\":true,\"user\":{{\"uid\":\"{userUId}\"}},\"climb\":{{\"gym_id\":{gymId},\"id\":{routeId.Value},\"live\":true}}}}}}"
+                : $"{{\"filters\":{{\"used\":true,\"user\":{{\"uid\":\"{userUId}\"}},\"climb\":{{\"gym_id\":{gymId},\"live\":true}}}}}}";
+            var response = await _topLoggerApi.GetOpinions(jsonParams);
+            _logger.LogDebug("TopLogger Response {0}", response);
+            return response;
+        }
+        catch (ApiException apiEx)
+        {
+            _logger.LogError(apiEx, $"{nameof(GetOpinions)} Error: {apiEx.StatusCode}, {apiEx.ReasonPhrase}");
+            return new List<Opinion>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"{nameof(GetOpinions)} Exception");
+            return new List<Opinion>();
         }
     }
 }

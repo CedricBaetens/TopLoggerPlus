@@ -31,7 +31,18 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
         }
     }
 
-    public ICommand Appearing => new Command(() => OnAppearing());
+    private RouteCommunityInfo _communityInfo;
+    public RouteCommunityInfo CommunityInfo
+    {
+        get => _communityInfo;
+        set
+        {
+            _communityInfo = value;
+            OnPropertyChanged(nameof(CommunityInfo));
+        }
+    }
+
+    public ICommand Appearing => new Command(async () => await OnAppearing());
     public ICommand Back => new Command(async () => await OnBack());
 
     public RouteDetailsViewModel(IRouteService routeService)
@@ -39,9 +50,11 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
         _routeService = routeService;
     }
 
-    private void OnAppearing()
+    private async Task OnAppearing()
     {
         Route = _routeService.GetRouteById(_routeId);
+        CommunityInfo = null;
+        CommunityInfo = await _routeService.GetRouteCommunityInfo(_routeId);
     }
     private async Task OnBack()
     {

@@ -84,7 +84,7 @@ task PublishPackages {
         New-Item $releaseDir -ItemType Directory
     }
     
-    exec { dotnet publish -f:net6.0-android $source_dir\Services\App\TopLoggerPlus.App\TopLoggerPlus.App.csproj -c $build_configuration -o (Resolve-Path $appReleaseDir) }
+    exec { dotnet publish -f:net7.0-android $source_dir\Services\App\TopLoggerPlus.App\TopLoggerPlus.App.csproj -c $build_configuration -o (Resolve-Path $appReleaseDir) }
 
     Write-Host "Published packages."
 }

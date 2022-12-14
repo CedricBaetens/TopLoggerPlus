@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Collections;
+using System.Globalization;
 
 namespace TopLoggerPlus.App.Utils;
 
@@ -8,7 +9,7 @@ public class BackgroundColorConverter : IValueConverter
     {
         var route = value as Route;
         return route?.Ascends.Count > 0
-            ? Colors.Green
+            ? Color.FromArgb("4CAF50")
             : Colors.Transparent;
     }
 

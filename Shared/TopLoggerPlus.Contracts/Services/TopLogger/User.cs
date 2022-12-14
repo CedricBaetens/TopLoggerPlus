@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace TopLoggerPlus.Contracts.Services.TopLogger;
+﻿namespace TopLoggerPlus.Contracts.Services.TopLogger;
 
 public class User
 {

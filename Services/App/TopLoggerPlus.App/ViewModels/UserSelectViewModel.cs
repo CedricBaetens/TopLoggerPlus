@@ -77,7 +77,7 @@ public class UserSelectViewModel : INotifyPropertyChanged
     {
         if (SelectedGym == null || SelectedUser == null) return;
 
-        _routeService.SaveUserInfo(SelectedGym.Name, SelectedUser.Id);
+        _routeService.SaveUserInfo(SelectedGym, SelectedUser);
         await Application.Current.MainPage.DisplayAlert("UserInfo Saved", "", "Ok");
     }
 

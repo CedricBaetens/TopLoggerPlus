@@ -2,8 +2,11 @@
 
 public static class StringExtensions
 {
-    public static string GetFrenchGrade(this string input)
+    public static string? GetFrenchGrade(this string input)
     {
+        if (string.IsNullOrEmpty(input))
+            return null;
+
         if (input == "2.0")
             return "?";
 

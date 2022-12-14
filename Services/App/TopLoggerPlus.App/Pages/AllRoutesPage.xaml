@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
              x:Class="TopLoggerPlus.App.Pages.AllRoutesPage"
-             Title="All Routes">
+             Title="All Routes"
+             >
     <ContentPage.Resources>
         <utils:BackgroundColorConverter x:Key="BackgroundColorConverter"/>
         <utils:RouteColorConverter x:Key="RouteColorConverter"/>
@@ -18,11 +19,12 @@
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <ViewCell>
-                            <HorizontalStackLayout BackgroundColor="{Binding ., Converter={StaticResource BackgroundColorConverter}}">
+                            <HorizontalStackLayout BackgroundColor="{Binding ., Converter={StaticResource BackgroundColorConverter}}" Margin="1,1,1,1">
                                 <Ellipse Fill="{Binding Color.Value, Converter={StaticResource RouteColorConverter}}"
                                      WidthRequest="15"
                                      HeightRequest="15"
-                                     HorizontalOptions="Start" />
+                                     HorizontalOptions="Start"
+                                     Margin="10,0,10,0"/>
                                 <Label VerticalOptions="Center" Text="{Binding ., StringFormat=' {0}'}" FontAttributes="Bold" />
                             </HorizontalStackLayout>
                         </ViewCell>
@@ -30,7 +32,8 @@
                 </ListView.ItemTemplate>
             </ListView>
             <Label HorizontalOptions="Center" Text="{Binding LastSynced, StringFormat='Last Synced: {0:dd/MM/yyyy HH:mm}'}" />
-            <Button Text="Refresh" Command="{Binding Refresh}" />
+            <Button Text="Refresh" Command="{Binding Refresh}" Margin="10" 
+                    BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource White}" />
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>

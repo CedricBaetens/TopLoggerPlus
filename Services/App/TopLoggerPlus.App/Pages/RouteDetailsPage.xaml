@@ -3,46 +3,53 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
              x:Class="TopLoggerPlus.App.Pages.RouteDetailsPage"
-             Title="{Binding Route.Grade, StringFormat='RouteDetails Id: {0}'}">
-    
+             Title="{Binding Route}">
+
     <ContentPage.Resources>
         <utils:RouteColorConverter x:Key="RouteColorConverter"/>
     </ContentPage.Resources>
     
     <ContentPage.Content>
         <StackLayout>
-            <Label Text="{Binding Route.Rope, StringFormat='Rope: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <Label Text="{Binding Route.Grade, StringFormat='Grade: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <Label Text="{Binding Route.Wall, StringFormat='Wall: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
+            <Label Text="{Binding Route.Rope, StringFormat='Rope: {0}'}"/>
+            <Label Text="{Binding Route.Grade, StringFormat='Grade: {0}'}"/>
+            <Label Text="{Binding Route.Wall, StringFormat='Wall: {0}'}"/>
             <HorizontalStackLayout>
-                <Label Text="Color: " VerticalOptions="Center" HorizontalOptions="Start" />
+                <Label Text="Color: "/>
                 <Ellipse Fill="{Binding Route.Color.Value, Converter={StaticResource RouteColorConverter}}"
-                    WidthRequest="20" HeightRequest="20" HorizontalOptions="Center" />
+                         WidthRequest="20" HeightRequest="20" Margin="10,0,0,0"/>
             </HorizontalStackLayout>
-            <Label Text="{Binding Route.Ascends.Count, StringFormat='Ascends: {0}'}"
-                    VerticalOptions="Center" 
-                    HorizontalOptions="Start" />
-            <ListView ItemsSource="{Binding Route.Ascends}">
+
+            <Label Text="{Binding Route.Ascends.Count, StringFormat='Ascends: {0}'}" Margin="0,10,0,0"/>
+            <ListView ItemsSource="{Binding Route.Ascends}" VerticalOptions="Start" Margin="10,0,0,0">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <ViewCell>
                             <HorizontalStackLayout>
-                                <Label VerticalOptions="Center" Text="{Binding LoggedAt, StringFormat='  - {0:dd/MM/yyyy} '}" />
-                                <Label VerticalOptions="Center" Text="{Binding Age, StringFormat=' ({0:0}d)'}" />
-                                <Label VerticalOptions="Center" Text="{Binding TopType, StringFormat=' {0}'}" />
+                                <Label VerticalOptions="Center" Text="{Binding LoggedAt, StringFormat='✓ {0:dd/MM/yyyy} '}"/>
+                                <Label VerticalOptions="Center" Text="{Binding Age, StringFormat=' ({0:0}d)'}"/>
+                                <Label VerticalOptions="Center" Text="{Binding TopType, StringFormat=' {0}'}"/>
                             </HorizontalStackLayout>
                         </ViewCell>
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
 
-            <Button Text="Back" Command="{Binding Back}"/>
+            <Label Text="Community Info" Margin="0,10,0,0"/>
+            <Label Text="{Binding CommunityInfo.CommunityGrades, StringFormat='Grades: {0}'}" Margin="10,0,0,0"/>
+            <Label Text="{Binding CommunityInfo.CommunityStars, StringFormat='Stars: {0}'}" Margin="10,0,0,0"/>
+            <ListView ItemsSource="{Binding CommunityInfo.Toppers}" Margin="10,10,0,0">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <Label VerticalOptions="Center" Text="{Binding ., StringFormat='✓ {0}'}"/>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            
+            <Button Text="Back" Command="{Binding Back}" Margin="10" 
+                   BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource White}"/>
         </StackLayout>
     </ContentPage.Content>
 </ContentPage>
