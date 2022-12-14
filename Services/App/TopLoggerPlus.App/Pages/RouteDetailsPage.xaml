@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
              x:Class="TopLoggerPlus.App.Pages.RouteDetailsPage"
-             Title="{Binding Route.Grade, StringFormat='RouteDetails Id: {0}'}">
+             Title="{Binding Route}">
     
     <ContentPage.Resources>
         <utils:RouteColorConverter x:Key="RouteColorConverter"/>
@@ -41,6 +41,17 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
+            
+            <Label Text="Community Info"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Start" />
+            <Label Text="{Binding CommunityInfo.CommunityGrades, StringFormat='Grades: {0}'}"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Start" />
+            <Label Text="{Binding CommunityInfo.CommunityStars, StringFormat='Stars: {0}'}"
+                    VerticalOptions="Center" 
+                    HorizontalOptions="Start" />
+            <ListView ItemsSource="{Binding CommunityInfo.Toppers}"/>
 
             <Button Text="Back" Command="{Binding Back}"/>
         </StackLayout>

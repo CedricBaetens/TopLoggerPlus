@@ -21,7 +21,7 @@ public class TestService : ITestService
     public async Task Run()
     {
         //await TopLoggerServiceTests("klimax", 5437061749);
-        await RouteServiceTests("klimax", 5437061749);
+        await RouteServiceTests(49, "klimax", 5437061749, 267453);
     }
     private async Task TopLoggerServiceTests(string gymName, long userUId)
     {
@@ -40,10 +40,16 @@ public class TestService : ITestService
         var ascends = await _topLoggerService.GetAscends(userUId, gymDetails.Id);
         _logger.LogDebug("Ascends; {0}", ascends);
     }
-    private async Task RouteServiceTests(string gymName, long userUId)
+    private async Task RouteServiceTests(int gymId, string gymName, long userUId, int routeId)
     {
-        _routeService.SaveUserInfo(gymName, userUId);
+        var gym = new Contracts.Domain.Gym { Id = gymId, Name = gymName };
+        var user = new Contracts.Domain.User { Id = userUId };
+
+        _routeService.SaveUserInfo(gym, user);
         var routes = await _routeService.GetRoutes();
         _logger.LogDebug("Routes; {0}", routes);
+
+        var routeCommunityInfo = await _routeService.GetRouteCommunityInfo(routeId);
+        _logger.LogDebug("RouteCommunityInfo; {0}", routeCommunityInfo);
     }
 }
