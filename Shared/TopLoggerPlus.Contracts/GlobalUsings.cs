@@ -3,4 +3,5 @@ global using Refit;
 global using System.Text.Json.Serialization;
 global using TopLoggerPlus.Contracts.Domain;
 global using TopLoggerPlus.Contracts.Enums;
+global using TopLoggerPlus.Contracts.Services.TopLogger.Requests;
 global using TopLoggerPlus.Contracts.Utils;

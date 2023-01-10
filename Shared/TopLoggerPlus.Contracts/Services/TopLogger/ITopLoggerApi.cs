@@ -2,6 +2,11 @@
 
 public interface ITopLoggerApi
 {
+    [Post("/users/sign_in.json")]
+    Task<SignInResponse> SignIn([Body] SignInRequest signInRequest);
+    [Post("/v1/ascends/create_many.json")]
+    Task<List<Ascend>> CreateAscends([Body] CreateAscendsRequest createAscends, [Header("x-user-email")] string userEmail, [Header("x-user-token")] string userToken);
+
     [Get("/v1/gyms.json")]
     Task<List<Gym>> GetGyms([AliasAs("json_params")] string jsonParams);
 
@@ -15,7 +20,7 @@ public interface ITopLoggerApi
     Task<List<User>> GetUsers(int gymId, [AliasAs("climbs_type")] string climbTypes, [AliasAs("ranking_type")] string rankingType);
 
     [Get("/v1/ascends.json")]
-    Task<List<Ascend>> GetAscends([AliasAs("json_params")] string jsonParams, [AliasAs("serialize_checks")] string serializeChecks);
+    Task<List<Ascend>> GetAscends([AliasAs("json_params")] string jsonParams, [AliasAs("serialize_checks")] string serializeChecks, [Header("x-user-email")] string? userEmail, [Header("x-user-token")] string? userToken);
     [Get("/v1/opinions.json")]
     Task<List<Opinion>> GetOpinions([AliasAs("json_params")] string jsonParams);
 }

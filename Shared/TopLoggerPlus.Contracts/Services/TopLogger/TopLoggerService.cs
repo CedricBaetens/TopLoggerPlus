@@ -2,6 +2,9 @@
 
 public interface ITopLoggerService
 {
+    Task<SignInResponse?> SignIn(string email, string password);
+    Task<List<Ascend>> CreateAscends(List<NewAscend> ascends, string userEmail, string userToken);
+
     Task<List<Gym>?> GetGyms();
 
     Task<GymDetails?> GetGymByName(string name);
@@ -9,7 +12,7 @@ public interface ITopLoggerService
     Task<RouteStats?> GetRouteStats(int gymId, int routeId);
     Task<List<User>> GetUsers(int gymId);
 
-    Task<List<Ascend>> GetAscends(long userUId, int gymId);
+    Task<List<Ascend>> GetAscends(long userUId, int gymId, string? userEmail = null, string? userToken = null);
     Task<List<Opinion>> GetOpinions(long userUId, int gymId, int? routeId = null);
 }
 
@@ -22,6 +25,46 @@ public class TopLoggerService : ITopLoggerService
     {
         _logger = logger;
         _topLoggerApi = topLoggerApi;
+    }
+
+    public async Task<SignInResponse?> SignIn(string email, string password)
+    {
+        try
+        {
+            var response = await _topLoggerApi.SignIn(new SignInRequest { User = new SignInRequest.AuthUser { Email = email, Password = password } });
+            _logger.LogDebug("TopLogger Response {0}", response);
+            return response;
+        }
+        catch (ApiException apiEx)
+        {
+            _logger.LogError(apiEx, $"{nameof(SignIn)} Error: {apiEx.StatusCode}, {apiEx.ReasonPhrase}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"{nameof(SignIn)} Exception");
+            return null;
+        }
+    }
+
+    public async Task<List<Ascend>> CreateAscends(List<NewAscend> ascends, string userEmail, string userToken)
+    {
+        try
+        {
+            var response = await _topLoggerApi.CreateAscends(new CreateAscendsRequest { Ascends = ascends}, userEmail, userToken);
+            _logger.LogDebug("TopLogger Response {0}", response);
+            return response;
+        }
+        catch (ApiException apiEx)
+        {
+            _logger.LogError(apiEx, $"{nameof(CreateAscends)} Error: {apiEx.StatusCode}, {apiEx.ReasonPhrase}");
+            return new List<Ascend>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"{nameof(CreateAscends)} Exception");
+            return new List<Ascend>();
+        }
     }
 
     public async Task<List<Gym>?> GetGyms()
@@ -124,12 +167,12 @@ public class TopLoggerService : ITopLoggerService
         }
     }
 
-    public async Task<List<Ascend>> GetAscends(long userUId, int gymId)
+    public async Task<List<Ascend>> GetAscends(long userUId, int gymId, string? userEmail = null, string? userToken = null)
     {
         try
         {
             var jsonParams = $"{{\"filters\":{{\"used\":true,\"user\":{{\"uid\":\"{userUId}\"}},\"climb\":{{\"gym_id\":{gymId},\"live\":true}}}}}}";
-            var response = await _topLoggerApi.GetAscends(jsonParams, "true");
+            var response = await _topLoggerApi.GetAscends(jsonParams, "true", userEmail, userToken);
             _logger.LogDebug("TopLogger Response {0}", response);
             return response;
         }

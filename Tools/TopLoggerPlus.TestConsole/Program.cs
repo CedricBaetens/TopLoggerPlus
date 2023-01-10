@@ -13,9 +13,11 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<TestConsoleRunner>();
         services.AddTransient<ITestService, TestService>();
 
+        services.AddTransient<LoggingDelegatingHandler>();
         services.AddTransient<ITopLoggerService, TopLoggerService>();
         services.AddRefitClient<ITopLoggerApi>()
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.toplogger.nu"));
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.toplogger.nu"))
+            .AddHttpMessageHandler<LoggingDelegatingHandler>();
 
         services.AddTransient<IRouteService, RouteService>();
     })

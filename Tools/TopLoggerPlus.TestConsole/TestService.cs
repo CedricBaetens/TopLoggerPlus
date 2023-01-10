@@ -1,4 +1,7 @@
-﻿namespace TopLoggerPlus.TestConsole;
+﻿using Microsoft.Extensions.Logging;
+using TopLoggerPlus.Contracts.Services.TopLogger.Requests;
+
+namespace TopLoggerPlus.TestConsole;
 
 public interface ITestService
 {
@@ -20,8 +23,38 @@ public class TestService : ITestService
 
     public async Task Run()
     {
+        await TopLoggerAuthTests("toplogger_testuser@mailinator.com", "password");
         //await TopLoggerServiceTests("klimax", 5437061749);
-        await RouteServiceTests(49, "klimax", 5437061749, 267453);
+        //await RouteServiceTests(49, "klimax", 5437061749, 267453);
+    }
+
+    private async Task TopLoggerAuthTests(string userEmail, string userPassword)
+    {
+        var signInResponse = await _topLoggerService.SignIn(userEmail, userPassword);
+        _logger.LogDebug("Auth Response; {0}", signInResponse);
+
+        if (signInResponse == null)
+        {
+            _logger.LogDebug("Authentication failed");
+            return;
+        }
+
+        var ascends1 = await _topLoggerService.GetAscends(1273301533, 49, userEmail, signInResponse.AuthenticationToken);
+        _logger.LogDebug("Ascends; {0}", ascends1.Count);
+
+        //var newAscend = new NewAscend
+        //{
+        //    UserId = signInResponse.UserId,
+        //    ClimbId = 278061,
+        //    TopType = (int) Contracts.Enums.RouteTopType.RedPoint,
+        //    Topped = true,
+        //    DateLogged = DateTime.UtcNow
+        //};
+        //var loggedAscend = await _topLoggerService.CreateAscends(new List<NewAscend> { newAscend }, userEmail, signInResponse.AuthenticationToken);
+        //_logger.LogDebug("Logged Ascends; {0}", loggedAscend.Count);
+
+        //var ascends2 = await _topLoggerService.GetAscends(1273301533, 49, userEmail, signInResponse.AuthenticationToken);
+        //_logger.LogDebug("Ascends; {0}", ascends2.Count);
     }
     private async Task TopLoggerServiceTests(string gymName, long userUId)
     {
