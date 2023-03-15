@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
+             x:Class="TopLoggerPlus.App.Pages.Top10Page"
+             Title="Top 10">
+    <ContentPage.Resources>
+        <utils:BackgroundColorConverter x:Key="BackgroundColorConverter"/>
+        <utils:RouteColorConverter x:Key="RouteColorConverter"/>
+    </ContentPage.Resources>
+
+    <ContentPage.Content>
+        <StackLayout>
+            <StackLayout Orientation="Horizontal" Margin="10,0,0,0" HorizontalOptions="Center"
+                         RadioButtonGroup.GroupName="months" RadioButtonGroup.SelectedValue="{Binding DaysBack}">
+                <RadioButton Content="2 months" Value="60"  CheckedChanged="DaysBack_CheckedChanged" IsChecked="True"/>
+                <RadioButton Content="4 months" Value="120" CheckedChanged="DaysBack_CheckedChanged"/>
+                <RadioButton Content="6 months" Value="180" CheckedChanged="DaysBack_CheckedChanged"/>
+            </StackLayout>
+            <Label Text="{Binding AverageGrade}" Margin="10,10,10,10" HorizontalTextAlignment="Center"/>
+            <ListView ItemsSource="{Binding Routes}" SelectedItem="{Binding SelectedRoute}"
+                  IsPullToRefreshEnabled="True" RefreshCommand="{Binding Refresh}"
+                  IsRefreshing="{Binding IsBusy, Mode=OneWay}" CachingStrategy="RecycleElementAndDataTemplate"
+                  ItemSelected="ListView_ItemSelected">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <HorizontalStackLayout  Margin="1,1,1,1">
+                                <Ellipse Fill="{Binding Color.Value, Converter={StaticResource RouteColorConverter}}"
+                                     WidthRequest="15"
+                                     HeightRequest="15"
+                                     HorizontalOptions="Start" 
+                                     Margin="10,0,10,0"/>
+                                <Label VerticalOptions="Center" Text="{Binding Top10String, StringFormat=' {0}'}" FontAttributes="Bold" />
+                            </HorizontalStackLayout>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <Label HorizontalOptions="Center" Text="{Binding LastSynced, StringFormat='Last Synced: {0:dd/MM/yyyy HH:mm}'}" />
+            <Button Text="Refresh" Command="{Binding Refresh}" 
+                    Margin="10" 
+                    BackgroundColor="{StaticResource Primary}" 
+                    TextColor="{StaticResource White}" />
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>
