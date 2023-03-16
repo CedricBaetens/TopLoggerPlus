@@ -87,7 +87,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     private async Task OnAppearing()
     {
         IsBusy = true;
-        DaysBack = 60;
+        if (DaysBack == 0) DaysBack = 60;
         await ShowRoutes(false);
         IsBusy = false;
     }
@@ -114,13 +114,14 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     private async Task ShowRoutes(bool refresh)
     {
         var routes = await _routeService.GetBestAscends(DaysBack, refresh);
+
         LastSynced = DateTime.Now;
-        Routes = routes
+        Routes = routes?
             .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(a => a.BestAttemptScore).ThenByDescending(a => a.BestAttemptDateLogged)
             .Take(10).ToList();
-
-        var averageGrade = Math.Ceiling(Routes.Average(r => r.BestAttemptScore).Value);
+        
+        var averageGrade = Math.Ceiling(Routes?.Average(r => r.BestAttemptScore).Value ?? 0);
         var level = Math.Floor(averageGrade / 100);
         (var letter, var remainder) = (averageGrade % 100) switch
         {

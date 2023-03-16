@@ -246,5 +246,6 @@ public class RouteService : IRouteService
         if (File.Exists(_gymNameFile)) File.Delete(_gymNameFile);
         if (File.Exists(_userIdFile)) File.Delete(_userIdFile);
         if (File.Exists(_gymData)) File.Delete(_gymData);
+        if (File.Exists(_processedRoutes)) File.Delete(_processedRoutes);
     }
 }

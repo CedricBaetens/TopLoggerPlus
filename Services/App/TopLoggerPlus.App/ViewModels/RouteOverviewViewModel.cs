@@ -86,42 +86,35 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
 
     private async Task ShowRoutes(bool refresh)
     {
-        try
+        switch (_filterType)
         {
-            switch (_filterType)
-            {
-                case "AllRoutes":
-                    {
-                        (var routes, var syncTime) = await _routeService.GetRoutes(refresh);
-                        LastSynced = syncTime;
-                        Routes = routes
-                                    .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
-                                    .OrderBy(r => r.GradeNumber).ThenBy(r => r.Rope)
-                                    .ToList();
-                    }
-                    break;
-                case "ExpiringRoutes":
-                    {
-                        (var routes, var syncTime) = await _routeService.GetRoutes(refresh);
-                        LastSynced = syncTime;
-                        Routes = routes
-                                    .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase)
-                                                && r.Ascends.Count > 0 && r.Ascends.All(a => a.Age > 50))
-                                    .OrderByDescending(r => r.GradeNumber).ThenBy(r => r.Rope)
-                                    .ToList();
-                    }
-                    break;
-                default:
-                    {
-                        Routes = null;
-                        await Application.Current.MainPage.DisplayAlert("Route refresh failed", "", "Ok");
-                    }
-                    break;
-            }
-        }
-        catch
-        {
-            // TODO: this will throw an exception on startup causing app to crash on Android .
+            case "AllRoutes":
+                {
+                    (var routes, var syncTime) = await _routeService.GetRoutes(refresh);
+                    LastSynced = syncTime;
+                    Routes = routes?
+                                .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
+                                .OrderBy(r => r.GradeNumber).ThenBy(r => r.Rope)
+                                .ToList();
+                }
+                break;
+            case "ExpiringRoutes":
+                {
+                    (var routes, var syncTime) = await _routeService.GetRoutes(refresh);
+                    LastSynced = syncTime;
+                    Routes = routes?
+                                .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase)
+                                            && r.Ascends.Count > 0 && r.Ascends.All(a => a.Age > 50))
+                                .OrderByDescending(r => r.GradeNumber).ThenBy(r => r.Rope)
+                                .ToList();
+                }
+                break;
+            default:
+                {
+                    Routes = null;
+                    await Application.Current.MainPage.DisplayAlert("Route refresh failed", "", "Ok");
+                }
+                break;
         }
     }
 
