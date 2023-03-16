@@ -69,7 +69,7 @@ public class TopLoggerService : ITopLoggerService
     {
         try
         {
-            var jsonParams = "{\"filters\":{\"deleted\":false,\"live\":true}}";
+            var jsonParams = "{\"filters\":{\"live\":true}}";
             var response = await _topLoggerApi.GetRoutes(gymId, jsonParams);
             _logger.LogDebug("TopLogger Response {0}", response);
             return response;

@@ -25,6 +25,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<ExpiringRoutesPage>();
         builder.Services.AddTransient<RouteOverviewViewModel>();
 
+        builder.Services.AddSingleton<Top10Page>();
+        builder.Services.AddTransient<RouteTop10ViewModel>();
+
         builder.Services.AddSingleton<RouteDetailsPage>();
         builder.Services.AddTransient<RouteDetailsViewModel>();
 
