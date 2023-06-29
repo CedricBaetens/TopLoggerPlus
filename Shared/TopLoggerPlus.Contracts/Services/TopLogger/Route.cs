@@ -10,7 +10,7 @@ public class Route
     [JsonPropertyName("grade")]
     public string Grade { get; set; } = null!;
     [JsonPropertyName("rope_number")]
-    public int RopeNumber { get; set; }
+    public string? RopeNumber { get; set; }
     [JsonPropertyName("wall_id")]
     public int WallId { get; set; }
     [JsonPropertyName("setter_id")]
