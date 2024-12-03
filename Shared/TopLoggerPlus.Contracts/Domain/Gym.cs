@@ -2,6 +2,6 @@
 
 public class Gym
 {
-    public int Id { get; set; }
-    public string Name { get; set; } = null!;
+    public string Id { get; init; } = null!;
+    public string Name { get; init; } = null!;
 }

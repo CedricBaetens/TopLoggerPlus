@@ -1,4 +1,5 @@
 ﻿using Refit;
+using TopLoggerPlus.Contracts.Services.GraphQL;
 using TopLoggerPlus.Contracts.Services.TopLogger;
 
 namespace TopLoggerPlus.App;
@@ -32,9 +33,7 @@ public static class MauiProgram
         builder.Services.AddTransient<RouteDetailsViewModel>();
 
         builder.Services.AddSingleton<IRouteService, RouteService>();
-        builder.Services.AddTransient<ITopLoggerService, TopLoggerService>();
-        builder.Services.AddRefitClient<ITopLoggerApi>()
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.toplogger.nu"));
+        builder.Services.AddTransient<IGraphQLService, GraphQLService>();
 
         return builder.Build();
     }

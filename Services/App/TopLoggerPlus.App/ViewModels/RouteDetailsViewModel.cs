@@ -9,8 +9,8 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
 {
     private readonly IRouteService _routeService;
 
-    private int _routeId;
-    public int RouteId
+    private string _routeId;
+    public string RouteId
     {
         get => _routeId;
         set

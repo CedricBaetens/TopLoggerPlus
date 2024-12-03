@@ -2,7 +2,7 @@
 
 public class Route
 {
-    public long Id { get; set; }
+    public string Id { get; set; } = null!;
     public string Grade { get; set; } = null!;
     public int? GradeNumber { get; set; } = null!;
     public string Rope { get; set; } = null!;

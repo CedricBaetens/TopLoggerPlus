@@ -1,4 +1,7 @@
-﻿namespace TopLoggerPlus.TestConsole;
+﻿using TopLoggerPlus.Contracts.Services.GraphQL;
+using Route = TopLoggerPlus.Contracts.Services.GraphQL.Route;
+
+namespace TopLoggerPlus.TestConsole;
 
 public interface ITestService
 {
@@ -8,48 +11,26 @@ public interface ITestService
 public class TestService : ITestService
 {
     private readonly ILogger<TestService> _logger;
-    private readonly ITopLoggerService _topLoggerService;
-    private readonly IRouteService _routeService;
+    private readonly IGraphQLService _graphQLService;
 
-    public TestService(ILogger<TestService> logger, ITopLoggerService topLoggerService, IRouteService routeService)
+    public TestService(ILogger<TestService> logger, IGraphQLService graphQLService)
     {
         _logger = logger;
-        _topLoggerService = topLoggerService;
-        _routeService = routeService;
+        _graphQLService = graphQLService;
     }
 
     public async Task Run()
     {
-        //await TopLoggerServiceTests("klimax", 5437061749);
-        await RouteServiceTests(49, "klimax", 5437061749, 267453);
+        await GraphQLTest();
     }
-    private async Task TopLoggerServiceTests(string gymName, long userUId)
+    private async Task GraphQLTest()
     {
-        var gyms = await _topLoggerService.GetGyms();
-        _logger.LogDebug("Gyms retrieved; {0}", gyms);
+        // var gyms = await _graphQLService.GetGyms();
+        // foreach (var gym in gyms?.ToList())
+        //     _logger.LogInformation($"Name: {gym.Name}");
 
-        var gymDetails = await _topLoggerService.GetGymByName(gymName);
-        _logger.LogDebug("Gym Details; {0}", gymDetails);
-
-        if (gymDetails == null) return;
-        var routes = await _topLoggerService.GetRoutes(gymDetails.Id);
-        _logger.LogDebug("Routes; {0}", routes);
-        var users = await _topLoggerService.GetUsers(gymDetails.Id);
-        _logger.LogDebug("Users; {0}", users);
-
-        var ascends = await _topLoggerService.GetAscends(userUId, gymDetails.Id);
-        _logger.LogDebug("Ascends; {0}", ascends);
-    }
-    private async Task RouteServiceTests(int gymId, string gymName, long userUId, int routeId)
-    {
-        var gym = new Contracts.Domain.Gym { Id = gymId, Name = gymName };
-        var user = new Contracts.Domain.User { Id = userUId };
-
-        _routeService.SaveUserInfo(gym, user);
-        var routes = await _routeService.GetRoutes();
-        _logger.LogDebug("Routes; {0}", routes);
-
-        var routeCommunityInfo = await _routeService.GetRouteCommunityInfo(routeId);
-        _logger.LogDebug("RouteCommunityInfo; {0}", routeCommunityInfo);
+        var routes = await _graphQLService.GetRoutes("b9i9x3bqtdd6um275gbje");
+        foreach (var route in routes ?? new List<Route>())
+            _logger.LogInformation($"Id: {route.Id} Wall: {route.Wall?.NameLoc ?? "unknown"}");
     }
 }
