@@ -7,12 +7,53 @@ namespace TopLoggerPlus.Contracts.Services.GraphQL;
 
 public interface IGraphQLService
 {
+    Task<AuthTokens?> GetTokens(string refreshToken);
+    
     Task<List<Gym>?> GetGyms();
-    //Task<List<User>?> GetUsers(string gymId);
     Task<List<Route>?> GetRoutes(string gymId);
 }
 public class GraphQLService : IGraphQLService
 {
+    private readonly IStorageService _storageService;
+
+    public GraphQLService(IStorageService storageService)
+    {
+        _storageService = storageService;
+    }
+
+    public async Task<AuthTokens?> GetTokens(string refreshToken)
+    {
+        var tokensRequest = new GraphQLRequest
+        {
+            OperationName = "authSigninRefreshToken",
+            Variables = new { refreshToken },
+            Query = """
+                    mutation authSigninRefreshToken($refreshToken: JWT!) {
+                      tokens: authSigninRefreshToken(refreshToken: $refreshToken) {
+                        ...authTokens
+                        __typename
+                      }
+                    }
+
+                    fragment authTokens on AuthTokens {
+                      access {
+                        token
+                        expiresAt
+                        __typename
+                      }
+                      refresh {
+                        token
+                        expiresAt
+                        __typename
+                      }
+                      __typename
+                    }
+                    """
+        };
+        var result = await SendGraphQLQueryAsync<TokensResponse?>(tokensRequest, refreshToken);
+        return result?.Tokens;
+    }
+    
     public async Task<List<Gym>?> GetGyms()
     {
         var gymsRequest = new GraphQLRequest
@@ -36,37 +77,6 @@ public class GraphQLService : IGraphQLService
         };
         var result = await SendGraphQLQueryAsync<GymsResponse>(gymsRequest);
         return result.Gyms;
-    }
-    public async Task<List<User>?> GetUsers(string gymId)
-    {
-        var usersRequest = new GraphQLRequest
-        {
-            OperationName = "gymUsersForTlUserRankings",
-            Variables = new { gymId },
-            Query = """
-                    query gymUsersForTlUserRankings($gymId: ID!) {
-                      gymUsers(gymId: $gymId) {
-                        data {
-                          ...gymUserForRanking
-                          __typename
-                        }
-                        __typename
-                      }
-                    }
-
-                    fragment gymUserForRanking on GymUser {
-                      id
-                      user {
-                        id
-                        fullName
-                        __typename
-                      }
-                      __typename
-                    }
-                    """
-        };
-        var result = await SendGraphQLQueryAsync<UsersResponse>(usersRequest);
-        return result.GymUsers;
     }
     public async Task<List<Route>?> GetRoutes(string gymId)
     {
@@ -163,11 +173,17 @@ public class GraphQLService : IGraphQLService
         return result?.Climbs?.Data;
     }
     
-    private async Task<T> SendGraphQLQueryAsync<T>(GraphQLRequest request)
+    private async Task<T> SendGraphQLQueryAsync<T>(GraphQLRequest request, string? authorizationToken = null)
     {
-        using var graphQLClient = new GraphQLHttpClient("https://app.toplogger.nu/graphql", new NewtonsoftJsonSerializer());
+        using var httpClient = new HttpClient();
+        if (authorizationToken != null)
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {authorizationToken}");
+        
+        using var graphQLClient = new GraphQLHttpClient("https://app.toplogger.nu/graphql", new NewtonsoftJsonSerializer(), httpClient);
         var response = await graphQLClient.SendQueryAsync<T>(request);
-        File.WriteAllText("d:\\climbs.json", JsonConvert.SerializeObject(response.Data, Formatting.Indented));
+        //File.WriteAllText("d:\\data.json", JsonConvert.SerializeObject(response.Data, Formatting.Indented));
+        if (response.Errors != null) 
+            Console.WriteLine($"Request failed: {request.OperationName}, Error: {response.Errors.FirstOrDefault()?.Message}");
         return response.Data;
     }
 }

@@ -1,6 +1,4 @@
-﻿using Refit;
-using TopLoggerPlus.Contracts.Services.GraphQL;
-using TopLoggerPlus.Contracts.Services.TopLogger;
+﻿using TopLoggerPlus.Contracts.Services.GraphQL;
 
 namespace TopLoggerPlus.App;
 
@@ -34,6 +32,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<IRouteService, RouteService>();
         builder.Services.AddTransient<IGraphQLService, GraphQLService>();
+        builder.Services.AddTransient<IStorageService, StorageService>();
 
         return builder.Build();
     }

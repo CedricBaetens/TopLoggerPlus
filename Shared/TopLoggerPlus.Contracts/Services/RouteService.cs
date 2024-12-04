@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using TopLoggerPlus.Contracts.Services.GraphQL;
+﻿using TopLoggerPlus.Contracts.Services.GraphQL;
 using Gym = TopLoggerPlus.Contracts.Domain.Gym;
 using User = TopLoggerPlus.Contracts.Domain.User;
 using Route = TopLoggerPlus.Contracts.Domain.Route;
@@ -25,31 +24,12 @@ public interface IRouteService
 public class RouteService : IRouteService
 {
     private readonly IGraphQLService _graphQLService;
-    private readonly string _gymIdFile;
-    private readonly string _userIdFile;
-    private readonly string _gymData;
-    private readonly string _processedRoutes;
+    private readonly IStorageService _storageService;
 
-    public RouteService(IGraphQLService graphQLService)
+    public RouteService(IGraphQLService graphQLService, IStorageService storageService)
     {
         _graphQLService = graphQLService;
-
-        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TopLoggerPlus");
-        if (!Directory.Exists(directory))
-            Directory.CreateDirectory(directory);
-
-        var dataVersionFile = Path.Combine(directory, "v1.txt");
-        if (!File.Exists(dataVersionFile))
-        {
-            Directory.Delete(directory, true);
-            Directory.CreateDirectory(directory);
-            File.WriteAllText(dataVersionFile, "");
-        }
-
-        _gymIdFile = Path.Combine(directory, "gymid.txt");
-        _userIdFile = Path.Combine(directory, "userid.txt");
-        _gymData = Path.Combine(directory, "gymdata.json");
-        _processedRoutes = Path.Combine(directory, "processedroutes.json");
+        _storageService = storageService;
     }
 
     public async Task<List<Gym>> GetGyms()
@@ -65,8 +45,8 @@ public class RouteService : IRouteService
     }
     public void SaveUserInfo(Gym gym, User user)
     {
-        File.WriteAllText(_gymIdFile, gym.Id);
-        File.WriteAllText(_userIdFile, user.Id);
+        _storageService.Write("GymId", gym.Id);
+        _storageService.Write("UserId", user.Id);
     }
 
     public async Task<(List<Route>? routes, DateTime syncTime)> GetRoutes(bool refresh = false)
@@ -96,7 +76,7 @@ public class RouteService : IRouteService
             processedRoutes.Add(route);
         }
         
-        File.WriteAllText(_processedRoutes, JsonSerializer.Serialize(processedRoutes));
+        _storageService.Write("ProcessedRoutes", processedRoutes);
         return (processedRoutes.Where(r => !r.Deleted).ToList(), DateTime.Now);
         
         // var gymData = await GetGymData(refresh);
@@ -202,16 +182,16 @@ public class RouteService : IRouteService
     private async Task<GymData?> GetGymData(bool refresh)
     {
         GymData? gymData;
-        if (refresh || !File.Exists(_gymData))
+        if (refresh || !_storageService.Exists("GymData"))
         {
-            if (!File.Exists(_gymIdFile) || !File.Exists(_userIdFile))
+            if (!_storageService.Exists("GymId") || !_storageService.Exists("UserId"))
                 return null;
         
-            var gymId = File.ReadAllText(_gymIdFile);
-            //var userUId = File.ReadAllText(_userIdFile);
+            var gymId = _storageService.Read<string>("GymId");
+            //var userId = _storageService.Read<string>("UserId");
         
             var routes = await _graphQLService.GetRoutes(gymId);
-            //var ascends = await _topLoggerService.GetAscends(userUId, gymDetails.Id);
+            //var ascends = await _topLoggerService.GetAscends(userId, gymDetails.Id);
         
             gymData = new GymData
             {
@@ -219,20 +199,18 @@ public class RouteService : IRouteService
                 Routes = routes,
                 //Ascends = ascends
             };
-            File.WriteAllText(_gymData, JsonSerializer.Serialize(gymData));
+            _storageService.Write("GymData", gymData);
         }
         else
         {
-            gymData = JsonSerializer.Deserialize<GymData?>(File.ReadAllText(_gymData));
+            gymData = _storageService.Read<GymData>("GymData");
         }
         return gymData;
     }
     public Route? GetRouteById(string routeId)
     {
-        if (!File.Exists(_processedRoutes)) return null;
-        
-        var routes = JsonSerializer.Deserialize<List<Route>>(File.ReadAllText(_processedRoutes));
-        return routes?.FirstOrDefault(r => r.Id == routeId);
+        var processedRoutes = _storageService.Read<List<Route>>("ProcessedRoutes");
+        return processedRoutes?.FirstOrDefault(r => r.Id == routeId);
     }
     
     public async Task<RouteCommunityInfo?> GetRouteCommunityInfo(string routeId)
@@ -270,9 +248,9 @@ public class RouteService : IRouteService
 
     public void ClearAll()
     {
-        if (File.Exists(_gymIdFile)) File.Delete(_gymIdFile);
-        if (File.Exists(_userIdFile)) File.Delete(_userIdFile);
-        if (File.Exists(_gymData)) File.Delete(_gymData);
-        if (File.Exists(_processedRoutes)) File.Delete(_processedRoutes);
+        _storageService.Delete("GymId");
+        _storageService.Delete("UserId");
+        _storageService.Delete("GymData");
+        _storageService.Delete("ProcessedRoutes");
     }
 }

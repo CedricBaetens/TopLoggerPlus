@@ -1,5 +1,4 @@
-﻿using Refit;
-using Serilog;
+﻿using Serilog;
 using TopLoggerPlus.Contracts.Services.GraphQL;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -14,6 +13,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<TestConsoleRunner>();
         services.AddTransient<ITestService, TestService>();
         services.AddTransient<IGraphQLService, GraphQLService>();
+        services.AddTransient<IStorageService, StorageService>();
     })
     .Build();
 

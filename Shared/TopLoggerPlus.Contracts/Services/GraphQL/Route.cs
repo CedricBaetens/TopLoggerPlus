@@ -21,11 +21,11 @@ public class HoldColor
     public string NameLoc { get; set; } = null!;
 }
 
-public class RoutesResponse
-{
-    public PagedRoutes? Climbs { get; set; }
-}
 public class PagedRoutes
 {
     public List<Route>? Data { get; set; }
+}
+public class RoutesResponse
+{
+    public PagedRoutes? Climbs { get; set; }
 }
