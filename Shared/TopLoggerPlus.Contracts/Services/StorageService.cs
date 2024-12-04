@@ -7,24 +7,20 @@ public interface IStorageService
     T? Read<T>(string key);
     void Write<T>(string key, T value);
     void Delete(string key);
+
+    void ResetStorage();
 }
 
 public class StorageService : IStorageService
 {
+    private const string DataVersionFile = "v1.txt";
     private readonly string _directory;
 
     public StorageService()
     {
         _directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TopLoggerPlus");
-        if (!Directory.Exists(_directory))
-            Directory.CreateDirectory(_directory);
-        
-        var dataVersionFile = Path.Combine(_directory, "v1.txt");
-        if (File.Exists(dataVersionFile)) return;
-        
-        Directory.Delete(_directory, true);
-        Directory.CreateDirectory(_directory);
-        File.WriteAllText(dataVersionFile, "");
+        if (!File.Exists(Path.Combine(_directory, DataVersionFile)))
+            ResetStorage();
     }
 
     public T? Read<T>(string key)
@@ -43,5 +39,14 @@ public class StorageService : IStorageService
     {
         var path = Path.Combine(_directory, $"{key}.txt");
         if (File.Exists(path)) File.Delete(path);
+    }
+
+    public void ResetStorage()
+    {
+        if (Directory.Exists(_directory))
+            Directory.Delete(_directory, true);
+        
+        Directory.CreateDirectory(_directory);
+        File.WriteAllText(Path.Combine(_directory, DataVersionFile), "");
     }
 }

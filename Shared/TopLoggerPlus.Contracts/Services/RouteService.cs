@@ -248,9 +248,6 @@ public class RouteService : IRouteService
 
     public void ClearAll()
     {
-        _storageService.Delete("GymId");
-        _storageService.Delete("UserId");
-        _storageService.Delete("GymData");
-        _storageService.Delete("ProcessedRoutes");
+        _storageService.ResetStorage();
     }
 }
