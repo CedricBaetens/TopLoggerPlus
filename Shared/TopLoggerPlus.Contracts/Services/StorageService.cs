@@ -4,7 +4,6 @@ namespace TopLoggerPlus.Contracts.Services;
 
 public interface IStorageService
 {
-    bool Exists(string key);
     T? Read<T>(string key);
     void Write<T>(string key, T value);
     void Delete(string key);
@@ -28,11 +27,6 @@ public class StorageService : IStorageService
         File.WriteAllText(dataVersionFile, "");
     }
 
-    public bool Exists(string key)
-    {
-        var path = Path.Combine(_directory, $"{key}.txt");
-        return File.Exists(path);
-    }
     public T? Read<T>(string key)
     {
         var path = Path.Combine(_directory, $"{key}.txt");
