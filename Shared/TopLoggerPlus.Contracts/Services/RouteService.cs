@@ -182,29 +182,29 @@ public class RouteService : IRouteService
     private async Task<GymData?> GetGymData(bool refresh)
     {
         GymData? gymData;
-        if (refresh || !_storageService.Exists("GymData"))
-        {
-            if (!_storageService.Exists("GymId") || !_storageService.Exists("UserId"))
-                return null;
         
-            var gymId = _storageService.Read<string>("GymId");
-            //var userId = _storageService.Read<string>("UserId");
-        
-            var routes = await _graphQLService.GetRoutes(gymId);
-            //var ascends = await _topLoggerService.GetAscends(userId, gymDetails.Id);
-        
-            gymData = new GymData
-            {
-                //UserUId = userUId,
-                Routes = routes,
-                //Ascends = ascends
-            };
-            _storageService.Write("GymData", gymData);
-        }
-        else
+        if (!refresh)
         {
             gymData = _storageService.Read<GymData>("GymData");
+            if (gymData != null) return gymData;
         }
+        
+        var gymId = _storageService.Read<string>("GymId");
+        var userId = _storageService.Read<string>("UserId");
+        if (string.IsNullOrEmpty(gymId) || string.IsNullOrEmpty(userId))
+            return null;
+
+        var routes = await _graphQLService.GetRoutes(gymId);
+        //var ascends = await _topLoggerService.GetAscends(userId, gymDetails.Id);
+
+        gymData = new GymData
+        {
+            UserId = userId,
+            Routes = routes,
+            //Ascends = ascends
+        };
+        _storageService.Write("GymData", gymData);
+
         return gymData;
     }
     public Route? GetRouteById(string routeId)
