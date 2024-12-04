@@ -4,7 +4,7 @@ using System.Windows.Input;
 
 namespace TopLoggerPlus.App.ViewModels;
 
-public class UserSelectViewModel : INotifyPropertyChanged
+public class AccountViewModel : INotifyPropertyChanged
 {
     private IRouteService _routeService;
 
@@ -55,8 +55,10 @@ public class UserSelectViewModel : INotifyPropertyChanged
     public ICommand Appearing => new Command(async () => await OnAppearing());
     public ICommand GymSelected => new Command(async () => await OnGymSelected());
     public ICommand SaveUserInfo => new Command(async () => await OnSaveUserInfo());
+    public ICommand Logout => new Command(async () => await OnLogout());
+    public ICommand ClearData => new Command(async () => await OnClearData());
 
-    public UserSelectViewModel(IRouteService routeService)
+    public AccountViewModel(IRouteService routeService)
     {
         _routeService = routeService;
     }
@@ -79,6 +81,15 @@ public class UserSelectViewModel : INotifyPropertyChanged
 
         _routeService.SaveUserInfo(SelectedGym, SelectedUser);
         await Application.Current.MainPage.DisplayAlert("UserInfo Saved", "", "Ok");
+    }
+    private async Task OnLogout()
+    {
+        await Application.Current.MainPage.DisplayAlert("Logout pressed", "", "Ok");
+    }
+    private async Task OnClearData()
+    {
+        _routeService.ClearAll();
+        await Application.Current.MainPage.DisplayAlert("All info cleared", "", "Ok");
     }
 
     public event PropertyChangedEventHandler PropertyChanged;

@@ -1,8 +1,8 @@
 namespace TopLoggerPlus.App.Pages;
 
-public partial class UserSelectPage : ContentPage
+public partial class AccountPage : ContentPage
 {
-    public UserSelectPage(UserSelectViewModel vm)
+    public AccountPage(AccountViewModel vm)
     {
         InitializeComponent();
         BindingContext = vm;
@@ -11,10 +11,10 @@ public partial class UserSelectPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        ((UserSelectViewModel)BindingContext).Appearing.Execute(null);
+        ((AccountViewModel)BindingContext).Appearing.Execute(null);
     }
     private void Picker_SelectedIndexChanged(object sender, EventArgs e)
     {
-        ((UserSelectViewModel)BindingContext).GymSelected.Execute(null);
+        ((AccountViewModel)BindingContext).GymSelected.Execute(null);
     }
 }
