@@ -16,7 +16,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         set
         {
             _isBusy = value;
-            OnPropertyChanged(nameof(IsBusy));
+            OnPropertyChanged();
         }
     }
 
@@ -27,7 +27,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         set
         {
             _lastSynced = value;
-            OnPropertyChanged(nameof(LastSynced));
+            OnPropertyChanged();
         }
     }
 
@@ -38,7 +38,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         set
         {
             _routes = value;
-            OnPropertyChanged(nameof(Routes));
+            OnPropertyChanged();
         }
     }
 
@@ -49,7 +49,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         set
         {
             _selectedRoute = value;
-            OnPropertyChanged(nameof(SelectedRoute));
+            OnPropertyChanged();
         }
     }
 

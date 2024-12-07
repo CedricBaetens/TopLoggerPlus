@@ -205,7 +205,7 @@ public class GraphQLService : IGraphQLService
         
         var message = JsonConvert.SerializeObject(response.Errors, Formatting.Indented);
         if (message.Contains("UNAUTHENTICATED"))
-            throw new AuthorizationFailedException(message);
+            throw new AuthenticationFailedException(message);
         throw new GraphQLFailedException(message);
     }
 }

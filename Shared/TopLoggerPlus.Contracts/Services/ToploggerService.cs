@@ -8,12 +8,11 @@ namespace TopLoggerPlus.Contracts.Services;
 
 public interface IToploggerService
 {
+    Task Login(string refreshToken);
+    void Logout();
+    
     Task<User> GetMyUserInfo();
     
-    Task<List<Gym>> GetGyms();
-    Task<List<User>> GetUsers(string gymId);
-    void SaveUserInfo(Gym gym, User user);
-
     Task<(List<Route> routes, DateTime syncTime)> GetRoutes(bool refresh = false);
     Task<List<Route>> GetBestAscends(int daysBack, bool refresh = false);
     Route GetRouteById(string routeId);
@@ -26,35 +25,38 @@ public interface IToploggerService
 public class ToploggerService : IToploggerService
 {
     private readonly IGraphQLService _graphQLService;
+    private readonly IAuthenticationService _authenticationService;
     private readonly IStorageService _storageService;
 
-    public ToploggerService(IGraphQLService graphQLService, IStorageService storageService)
+    public ToploggerService(IGraphQLService graphQLService, IAuthenticationService authenticationService, IStorageService storageService)
     {
         _graphQLService = graphQLService;
+        _authenticationService = authenticationService;
         _storageService = storageService;
     }
 
-    public async Task<User> GetMyUserInfo()
+    public async Task Login(string refreshToken)
     {
-        var user = await _graphQLService.GetMyUserInfo();
-        return new User { Id = user.Id, Name = user.FullName, GymId = user.Gym.Id };
+        await _authenticationService.RefreshAccessToken(refreshToken);
+    }
+    public void Logout()
+    {
+        _authenticationService.Logout();
     }
     
-    public async Task<List<Gym>> GetGyms()
+    public async Task<User> GetMyUserInfo()
     {
-        var gyms = await _graphQLService.GetGyms();
-        return gyms?.ConvertAll(g => new Gym { Id = g.Id, Name = $"{g.CountryCode} - {g.Name}" }) ?? new List<Gym>();
-    }
-    public async Task<List<User>> GetUsers(string gymId)
-    {
-        // var users = await _topLoggerService.GetUsers(gymId);
-        // return users?.ConvertAll(u => new User { Id = u.UId, Name = u.Name }) ?? new List<User>();
-        return new List<User>{new() {Id = "x1f4twbraq4z98ek4se9i", Name = "Bjorn"}};
-    }
-    public void SaveUserInfo(Gym gym, User user)
-    {
-        _storageService.Write("GymId", gym.Id);
-        _storageService.Write("UserId", user.Id);
+        var userInfo = await _graphQLService.GetMyUserInfo();
+        _storageService.Write("UserInfo", userInfo);
+        return new User
+        {
+            Id = userInfo.Id,
+            Name = userInfo.FullName,
+            Gym = new Gym { Id = userInfo.Gym.Id, Name = userInfo.Gym.NameSlug },
+            FavoriteGyms = userInfo.GymUserFavorites?
+                .Select(g => new Gym { Id = g.Gym.Id, Name = g.Gym.Name })
+                .ToList() ?? new List<Gym>()
+        };
     }
 
     public async Task<(List<Route> routes, DateTime syncTime)> GetRoutes(bool refresh = false)
@@ -197,17 +199,15 @@ public class ToploggerService : IToploggerService
             if (gymData != null) return gymData;
         }
         
-        var gymId = _storageService.Read<string>("GymId");
-        var userId = _storageService.Read<string>("UserId");
-        if (string.IsNullOrEmpty(gymId) || string.IsNullOrEmpty(userId))
+        var userInfo = _storageService.Read<GraphQL.User>("UserInfo");
+        if (string.IsNullOrEmpty(userInfo?.Id) || string.IsNullOrEmpty(userInfo.Gym?.Id))
             return null;
 
-        var routes = await _graphQLService.GetRoutes(gymId);
+        var routes = await _graphQLService.GetRoutes(userInfo.Gym.Id);
         //var ascends = await _topLoggerService.GetAscends(userId, gymDetails.Id);
 
         gymData = new GymData
         {
-            UserId = userId,
             Routes = routes,
             //Ascends = ascends
         };

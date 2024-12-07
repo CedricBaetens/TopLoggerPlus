@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
@@ -8,17 +9,16 @@ public class AccountViewModel : INotifyPropertyChanged
 {
     private IToploggerService _toploggerService;
 
-    private List<Gym> _gyms;
-    public List<Gym> Gyms
+    private User _user;
+    public User User
     {
-        get => _gyms;
+        get => _user;
         set
         {
-            _gyms = value;
-            OnPropertyChanged(nameof(Gyms));
+            _user = value;
+            OnPropertyChanged();
         }
     }
-
     private Gym _selectedGym;
     public Gym SelectedGym
     {
@@ -26,35 +26,11 @@ public class AccountViewModel : INotifyPropertyChanged
         set
         {
             _selectedGym = value;
-            OnPropertyChanged(nameof(SelectedGym));
-        }
-    }
-
-    private List<User> _users;
-    public List<User> Users
-    {
-        get => _users;
-        set
-        {
-            _users = value;
-            OnPropertyChanged(nameof(Users));
-        }
-    }
-
-    private User _selectedUser;
-    public User SelectedUser
-    {
-        get => _selectedUser;
-        set
-        {
-            _selectedUser = value;
-            OnPropertyChanged(nameof(SelectedUser));
+            OnPropertyChanged();
         }
     }
 
     public ICommand Appearing => new Command(async () => await OnAppearing());
-    public ICommand GymSelected => new Command(async () => await OnGymSelected());
-    public ICommand SaveUserInfo => new Command(async () => await OnSaveUserInfo());
     public ICommand Logout => new Command(async () => await OnLogout());
     public ICommand ClearData => new Command(async () => await OnClearData());
 
@@ -65,40 +41,32 @@ public class AccountViewModel : INotifyPropertyChanged
 
     private async Task OnAppearing()
     {
-        //var stuff = await _toploggerService.GetMyUserInfo();
-        Gyms = (await _toploggerService.GetGyms()).OrderBy(g => g.Name).ToList();
-        Users = null;
-    }
-    private async Task OnGymSelected()
-    {
-        if (SelectedGym == null) return;
-
-        Users = (await _toploggerService.GetUsers(SelectedGym.Id)).OrderBy(u => u.Name).ToList();
-        SelectedUser = null;
-    }
-    private async Task OnSaveUserInfo()
-    {
-        if (SelectedGym == null || SelectedUser == null) return;
-
-        _toploggerService.SaveUserInfo(SelectedGym, SelectedUser);
-        await Application.Current.MainPage.DisplayAlert("UserInfo Saved", "", "Ok");
+        try
+        {
+            User = await _toploggerService.GetMyUserInfo();
+            SelectedGym = User.FavoriteGyms?.SingleOrDefault(g => g.Id == User.Gym.Id);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
     }
     private async Task OnLogout()
     {
-        //await Application.Current.MainPage.DisplayAlert("Logout pressed", "", "Ok");
-        await Shell.Current.GoToAsync($"//{nameof(AllRoutesPage)}");
+        _toploggerService.Logout();
+        await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
     }
     private async Task OnClearData()
     {
         _toploggerService.ClearAll();
         await Application.Current.MainPage.DisplayAlert("All info cleared", "", "Ok");
+        await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
     }
 
     public event PropertyChangedEventHandler PropertyChanged;
     protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
     {
-        PropertyChangedEventHandler handler = PropertyChanged;
-        if (handler != null)
-            handler(this, new PropertyChangedEventArgs(propertyName));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

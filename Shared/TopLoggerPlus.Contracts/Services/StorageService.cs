@@ -6,6 +6,7 @@ public interface IStorageService
 {
     T Read<T>(string key);
     void Write<T>(string key, T value);
+    void Delete(string key);
     
     void ResetStorage();
 }
@@ -33,6 +34,11 @@ public class StorageService : IStorageService
     {
         var path = Path.Combine(_directory, $"{key}.txt");
         File.WriteAllText(path, JsonSerializer.Serialize(value));
+    }
+    public void Delete(string key)
+    {
+        var path = Path.Combine(_directory, $"{key}.txt");
+        if (File.Exists(path)) File.Delete(path);
     }
 
     public void ResetStorage()

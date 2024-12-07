@@ -19,12 +19,12 @@ public class GraphQLFailedException : TopLoggerPlusException
     {
     }
 }
-public class AuthorizationFailedException : TopLoggerPlusException
+public class AuthenticationFailedException : TopLoggerPlusException
 {
-    public AuthorizationFailedException(string message) : base(message)
+    public AuthenticationFailedException(string message) : base(message)
     {
     }
-    public AuthorizationFailedException(string message, Exception innerException) : base(message, innerException)
+    public AuthenticationFailedException(string message, Exception innerException) : base(message, innerException)
     {
     }
 }

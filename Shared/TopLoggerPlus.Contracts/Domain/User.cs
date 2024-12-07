@@ -4,5 +4,7 @@ public class User
 {
     public string Id { get; init; }
     public string Name { get; init; }
-    public string GymId { get; init; }
-}
+    
+    public Gym Gym { get; init; }
+    public List<Gym> FavoriteGyms { get; init; }
+}   

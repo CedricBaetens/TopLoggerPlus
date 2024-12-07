@@ -16,7 +16,7 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
         set
         {
             _routeId = value;
-            OnPropertyChanged(nameof(RouteId));
+            OnPropertyChanged();
         }
     }
 
@@ -27,7 +27,7 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
         set
         {
             _route = value;
-            OnPropertyChanged(nameof(Route));
+            OnPropertyChanged();
         }
     }
 
@@ -38,7 +38,7 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
         set
         {
             _communityInfo = value;
-            OnPropertyChanged(nameof(CommunityInfo));
+            OnPropertyChanged();
         }
     }
 

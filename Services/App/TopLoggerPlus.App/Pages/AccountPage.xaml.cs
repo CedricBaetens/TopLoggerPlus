@@ -13,8 +13,4 @@ public partial class AccountPage : ContentPage
         base.OnAppearing();
         ((AccountViewModel)BindingContext).Appearing.Execute(null);
     }
-    private void Picker_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        ((AccountViewModel)BindingContext).GymSelected.Execute(null);
-    }
 }

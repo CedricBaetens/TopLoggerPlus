@@ -15,7 +15,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _isBusy = value;
-            OnPropertyChanged(nameof(IsBusy));
+            OnPropertyChanged();
         }
     }
 
@@ -26,7 +26,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _daysBack = value;
-            OnPropertyChanged(nameof(DaysBack));
+            OnPropertyChanged();
         }
     }
 
@@ -37,7 +37,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _averageGrade = value;
-            OnPropertyChanged(nameof(AverageGrade));
+            OnPropertyChanged();
         }
     }
 
@@ -48,7 +48,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _lastSynced = value;
-            OnPropertyChanged(nameof(LastSynced));
+            OnPropertyChanged();
         }
     }
 
@@ -59,7 +59,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _routes = value;
-            OnPropertyChanged(nameof(Routes));
+            OnPropertyChanged();
         }
     }
 
@@ -70,7 +70,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _selectedRoute = value;
-            OnPropertyChanged(nameof(SelectedRoute));
+            OnPropertyChanged();
         }
     }
 
