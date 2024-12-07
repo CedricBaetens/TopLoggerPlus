@@ -6,7 +6,7 @@ namespace TopLoggerPlus.App.ViewModels;
 
 public class RouteTop10ViewModel : INotifyPropertyChanged
 {
-    private readonly IRouteService _routeService;
+    private readonly IToploggerService _toploggerService;
 
     private bool _isBusy;
     public bool IsBusy
@@ -79,9 +79,9 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     public ICommand Refresh => new Command(async () => await OnRefresh());
     public ICommand Selected => new Command(async () => await OnSelected(SelectedRoute));
 
-    public RouteTop10ViewModel(IRouteService routeService)
+    public RouteTop10ViewModel(IToploggerService toploggerService)
     {
-        _routeService = routeService;
+        _toploggerService = toploggerService;
     }
 
     private async Task OnAppearing()
@@ -113,7 +113,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
 
     private async Task ShowRoutes(bool refresh)
     {
-        var routes = await _routeService.GetBestAscends(DaysBack, refresh);
+        var routes = await _toploggerService.GetBestAscends(DaysBack, refresh);
 
         LastSynced = DateTime.Now;
         Routes = routes?

@@ -13,6 +13,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<TestConsoleRunner>();
         services.AddTransient<ITestService, TestService>();
         services.AddTransient<IGraphQLService, GraphQLService>();
+        services.AddTransient<IAuthenticationService, AuthenticationService>();
         services.AddTransient<IStorageService, StorageService>();
     })
     .Build();

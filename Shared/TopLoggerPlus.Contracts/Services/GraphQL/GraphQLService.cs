@@ -7,54 +7,74 @@ namespace TopLoggerPlus.Contracts.Services.GraphQL;
 
 public interface IGraphQLService
 {
-    Task<AuthTokens?> GetTokens(string refreshToken);
-    
-    Task<List<Gym>?> GetGyms();
-    Task<List<Route>?> GetRoutes(string gymId);
+    Task<User> GetMyUserInfo();
+    Task<List<Gym>> GetGyms();
+    Task<List<Route>> GetRoutes(string gymId);
 }
 public class GraphQLService : IGraphQLService
 {
-    private readonly IStorageService _storageService;
+    private readonly IAuthenticationService _authenticationService;
 
-    public GraphQLService(IStorageService storageService)
+    public GraphQLService(IAuthenticationService authenticationService)
     {
-        _storageService = storageService;
+        _authenticationService = authenticationService;
     }
 
-    public async Task<AuthTokens?> GetTokens(string refreshToken)
+    public async Task<User> GetMyUserInfo()
     {
-        var tokensRequest = new GraphQLRequest
+        var userMeRequest = new GraphQLRequest
         {
-            OperationName = "authSigninRefreshToken",
-            Variables = new { refreshToken },
+            OperationName = "userMeStore",
             Query = """
-                    mutation authSigninRefreshToken($refreshToken: JWT!) {
-                      tokens: authSigninRefreshToken(refreshToken: $refreshToken) {
-                        ...authTokens
+                    query userMeStore {
+                      userMe {
+                        ...userMeStore
                         __typename
                       }
                     }
 
-                    fragment authTokens on AuthTokens {
-                      access {
-                        token
-                        expiresAt
+                    fragment userMeStoreFavorite on GymUserMe {
+                      id
+                      gym {
+                        id
+                        name
+                        nameSlug
+                        iconPath
                         __typename
                       }
-                      refresh {
-                        token
-                        expiresAt
+                      __typename
+                    }
+
+                    fragment userMeStore on UserMe {
+                      id
+                      locale
+                      gradingSystemRoutes
+                      gradingSystemBoulders
+                      anonymous
+                      profileReviewed
+                      avatarUploadPath
+                      firstName
+                      lastName
+                      fullName
+                      gender
+                      email
+                      gym {
+                        id
+                        nameSlug
+                        __typename
+                      }
+                      gymUserFavorites {
+                        ...userMeStoreFavorite
                         __typename
                       }
                       __typename
                     }
                     """
         };
-        var result = await SendGraphQLQueryAsync<TokensResponse?>(tokensRequest, refreshToken);
-        return result?.Tokens;
+        var result = await SendGraphQLQueryAsync<UserMeResponse>(userMeRequest);
+        return result.UserMe;
     }
-    
-    public async Task<List<Gym>?> GetGyms()
+    public async Task<List<Gym>> GetGyms()
     {
         var gymsRequest = new GraphQLRequest
         {
@@ -78,7 +98,7 @@ public class GraphQLService : IGraphQLService
         var result = await SendGraphQLQueryAsync<GymsResponse>(gymsRequest);
         return result.Gyms;
     }
-    public async Task<List<Route>?> GetRoutes(string gymId)
+    public async Task<List<Route>> GetRoutes(string gymId)
     {
         var gymsRequest = new GraphQLRequest
         {
@@ -169,21 +189,23 @@ public class GraphQLService : IGraphQLService
         // var result = await SendGraphQLQueryAsync<object>(gymsRequest);
         // return Array.Empty<Route>();
         
-        var result = await SendGraphQLQueryAsync<RoutesResponse?>(gymsRequest);
+        var result = await SendGraphQLQueryAsync<RoutesResponse>(gymsRequest);
         return result?.Climbs?.Data;
     }
     
-    private async Task<T> SendGraphQLQueryAsync<T>(GraphQLRequest request, string? authorizationToken = null)
+    private async Task<T> SendGraphQLQueryAsync<T>(GraphQLRequest request)
     {
         using var httpClient = new HttpClient();
-        if (authorizationToken != null)
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {authorizationToken}");
+        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {await _authenticationService.GetAccessToken()}");
         
         using var graphQLClient = new GraphQLHttpClient("https://app.toplogger.nu/graphql", new NewtonsoftJsonSerializer(), httpClient);
         var response = await graphQLClient.SendQueryAsync<T>(request);
-        //File.WriteAllText("d:\\data.json", JsonConvert.SerializeObject(response.Data, Formatting.Indented));
-        if (response.Errors != null) 
-            Console.WriteLine($"Request failed: {request.OperationName}, Error: {response.Errors.FirstOrDefault()?.Message}");
-        return response.Data;
+        if (response.Errors == null)
+            return response.Data;
+        
+        var message = JsonConvert.SerializeObject(response.Errors, Formatting.Indented);
+        if (message.Contains("UNAUTHENTICATED"))
+            throw new AuthorizationFailedException(message);
+        throw new GraphQLFailedException(message);
     }
 }

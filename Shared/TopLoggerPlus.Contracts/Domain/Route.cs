@@ -2,12 +2,12 @@
 
 public class Route
 {
-    public string Id { get; set; } = null!;
-    public string Grade { get; set; } = null!;
-    public int? GradeNumber { get; set; } = null!;
-    public string Rope { get; set; } = null!;
-    public string Wall { get; set; } = null!;
-    public RouteColor Color { get; set; } = null!;
+    public string Id { get; set; }
+    public string Grade { get; set; }
+    public int? GradeNumber { get; set; }
+    public string Rope { get; set; }
+    public string Wall { get; set; }
+    public RouteColor Color { get; set; }
 
     public List<Ascend> Ascends { get; set; } = new List<Ascend>();
     public string? MyGrade { get; set; }

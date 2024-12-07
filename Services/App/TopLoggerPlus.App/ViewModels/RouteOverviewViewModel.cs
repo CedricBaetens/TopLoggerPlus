@@ -6,7 +6,7 @@ namespace TopLoggerPlus.App.ViewModels;
 
 public class RouteOverviewViewModel : INotifyPropertyChanged
 {
-    private readonly IRouteService _routeService;
+    private readonly IToploggerService _toploggerService;
     private string _filterType;
 
     private bool _isBusy;
@@ -57,9 +57,9 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
     public ICommand Refresh => new Command(async () => await OnRefresh());
     public ICommand Selected => new Command(async () => await OnSelected(SelectedRoute));
 
-    public RouteOverviewViewModel(IRouteService routeService)
+    public RouteOverviewViewModel(IToploggerService toploggerService)
     {
-        _routeService = routeService;
+        _toploggerService = toploggerService;
     }
 
     private async Task OnAppearing(string filterType)
@@ -90,7 +90,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         {
             case "AllRoutes":
                 {
-                    (var routes, var syncTime) = await _routeService.GetRoutes(refresh);
+                    (var routes, var syncTime) = await _toploggerService.GetRoutes(refresh);
                     LastSynced = syncTime;
                     Routes = routes?
                                 .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
@@ -100,7 +100,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
                 break;
             case "ExpiringRoutes":
                 {
-                    (var routes, var syncTime) = await _routeService.GetRoutes(refresh);
+                    (var routes, var syncTime) = await _toploggerService.GetRoutes(refresh);
                     LastSynced = syncTime;
                     Routes = routes?
                                 .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase)

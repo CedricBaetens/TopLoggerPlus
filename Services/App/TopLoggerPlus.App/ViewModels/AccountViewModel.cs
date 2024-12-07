@@ -6,7 +6,7 @@ namespace TopLoggerPlus.App.ViewModels;
 
 public class AccountViewModel : INotifyPropertyChanged
 {
-    private IRouteService _routeService;
+    private IToploggerService _toploggerService;
 
     private List<Gym> _gyms;
     public List<Gym> Gyms
@@ -58,37 +58,39 @@ public class AccountViewModel : INotifyPropertyChanged
     public ICommand Logout => new Command(async () => await OnLogout());
     public ICommand ClearData => new Command(async () => await OnClearData());
 
-    public AccountViewModel(IRouteService routeService)
+    public AccountViewModel(IToploggerService toploggerService)
     {
-        _routeService = routeService;
+        _toploggerService = toploggerService;
     }
 
     private async Task OnAppearing()
     {
-        Gyms = (await _routeService.GetGyms()).OrderBy(g => g.Name).ToList();
+        //var stuff = await _toploggerService.GetMyUserInfo();
+        Gyms = (await _toploggerService.GetGyms()).OrderBy(g => g.Name).ToList();
         Users = null;
     }
     private async Task OnGymSelected()
     {
         if (SelectedGym == null) return;
 
-        Users = (await _routeService.GetUsers(SelectedGym.Id)).OrderBy(u => u.Name).ToList();
+        Users = (await _toploggerService.GetUsers(SelectedGym.Id)).OrderBy(u => u.Name).ToList();
         SelectedUser = null;
     }
     private async Task OnSaveUserInfo()
     {
         if (SelectedGym == null || SelectedUser == null) return;
 
-        _routeService.SaveUserInfo(SelectedGym, SelectedUser);
+        _toploggerService.SaveUserInfo(SelectedGym, SelectedUser);
         await Application.Current.MainPage.DisplayAlert("UserInfo Saved", "", "Ok");
     }
     private async Task OnLogout()
     {
-        await Application.Current.MainPage.DisplayAlert("Logout pressed", "", "Ok");
+        //await Application.Current.MainPage.DisplayAlert("Logout pressed", "", "Ok");
+        await Shell.Current.GoToAsync($"//{nameof(AllRoutesPage)}");
     }
     private async Task OnClearData()
     {
-        _routeService.ClearAll();
+        _toploggerService.ClearAll();
         await Application.Current.MainPage.DisplayAlert("All info cleared", "", "Ok");
     }
 

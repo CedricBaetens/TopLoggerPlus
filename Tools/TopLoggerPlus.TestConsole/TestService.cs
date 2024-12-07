@@ -11,11 +11,13 @@ public interface ITestService
 public class TestService : ITestService
 {
     private readonly ILogger<TestService> _logger;
+    private readonly IAuthenticationService _authenticationService;
     private readonly IGraphQLService _graphQLService;
 
-    public TestService(ILogger<TestService> logger, IGraphQLService graphQLService)
+    public TestService(ILogger<TestService> logger, IAuthenticationService authenticationService, IGraphQLService graphQLService)
     {
         _logger = logger;
+        _authenticationService = authenticationService;
         _graphQLService = graphQLService;
     }
 
@@ -25,6 +27,17 @@ public class TestService : ITestService
     }
     private async Task GraphQLTest()
     {
+        // retrieve refresh token from dev tools in a browser
+        // const string refreshToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ4MWY0dHdicmFxNHo5OGVrNHNlOWkiLCJqdGkiOiJQUXBmZGpwVSIsImlhdCI6MTczMzU5ODYyNiwiZXhwIjoxNzM0ODA4MjI2fQ.0MxY1vh5MRJkvA4UOMfus_Ss4-FHOhy9BzjrR-TcWRI";
+        // var accessToken = await _authenticationService.RefreshAccessToken(refreshToken);
+        // _logger.LogInformation("AccessToken refreshed: {accessToken}", accessToken);
+        
+        var accessToken = await _authenticationService.GetAccessToken();
+        _logger.LogInformation("AccessToken: {accessToken}", accessToken);
+        
+        var user = await _graphQLService.GetMyUserInfo();
+        _logger.LogInformation($"Id: {user.Id}, Name: {user.FullName}, GymId: {user.Gym.Id}");
+        
         // var gyms = await _graphQLService.GetGyms();
         // foreach (var gym in gyms?.ToList())
         //     _logger.LogInformation($"Name: {gym.Name}");
@@ -32,9 +45,5 @@ public class TestService : ITestService
         // var routes = await _graphQLService.GetRoutes("b9i9x3bqtdd6um275gbje");
         // foreach (var route in routes ?? new List<Route>())
         //     _logger.LogInformation($"Id: {route.Id} Wall: {route.Wall?.NameLoc ?? "unknown"}");
-        
-        var authTokens = await _graphQLService.GetTokens("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ4MWY0dHdicmFxNHo5OGVrNHNlOWkiLCJqdGkiOiJ0a0xHaVo1bCIsImlhdCI6MTczMzM0ODU0OCwiZXhwIjoxNzM0NTU4MTQ4fQ.eVwn8ucbOlmLQIRsZyKFoSvFmbo3PMIPddorEKYcVfI");
-        _logger.LogInformation("AccessToken: {accessToken}, RefreshToken: {refreshToken}",
-            authTokens?.Access.Token, authTokens?.Refresh.Token);
     }
 }

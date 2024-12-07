@@ -28,4 +28,15 @@ public static class ClimbExtensions
             ? new RouteColor { Name = hold.NameLoc, Value = hold.Color }
             : new RouteColor { Name = "unknown", Value = "#000000" };
     }
+    
+    // public static int GetGradeWithBonus(this Services.TopLogger.Ascend ascend, int grade)
+    // {
+    //     return ascend.TopType switch
+    //     {
+    //         RouteTopType.RedPoint => grade,
+    //         RouteTopType.Flash => grade + 10,
+    //         RouteTopType.OnSight => grade + 15,
+    //         _ => 0,
+    //     };
+    // }
 }

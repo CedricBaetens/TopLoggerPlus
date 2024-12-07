@@ -7,8 +7,8 @@
     x:Name="MainShell"
     Title="TopLoggerPlus">
 
-    <ShellContent x:Name="AccountShell" Title="Account" ContentTemplate="{DataTemplate page:AccountPage}" Route="AccountPage" />
-    <ShellContent x:Name="AllRouteShell" Title="All Routes" ContentTemplate="{DataTemplate page:AllRoutesPage}" Route="AllRoutesPage" />
+    <ShellContent Title="Account" ContentTemplate="{DataTemplate page:AccountPage}" Route="AccountPage" />
+    <ShellContent Title="All Routes" ContentTemplate="{DataTemplate page:AllRoutesPage}" Route="AllRoutesPage" />
     <ShellContent Title="Expiring Routes" ContentTemplate="{DataTemplate page:ExpiringRoutesPage}" Route="ExpiringRoutesPage" />
     <ShellContent Title="Top 10" ContentTemplate="{DataTemplate page:Top10Page}" Route="Top10Page" />
 </Shell>

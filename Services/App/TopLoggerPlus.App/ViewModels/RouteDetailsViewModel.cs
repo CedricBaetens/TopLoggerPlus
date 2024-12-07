@@ -7,7 +7,7 @@ namespace TopLoggerPlus.App.ViewModels;
 [QueryProperty(nameof(RouteId), nameof(RouteId))]
 public class RouteDetailsViewModel : INotifyPropertyChanged
 {
-    private readonly IRouteService _routeService;
+    private readonly IToploggerService _toploggerService;
 
     private string _routeId;
     public string RouteId
@@ -45,16 +45,16 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
     public ICommand Appearing => new Command(async () => await OnAppearing());
     public ICommand Back => new Command(async () => await OnBack());
 
-    public RouteDetailsViewModel(IRouteService routeService)
+    public RouteDetailsViewModel(IToploggerService toploggerService)
     {
-        _routeService = routeService;
+        _toploggerService = toploggerService;
     }
 
     private async Task OnAppearing()
     {
-        Route = _routeService.GetRouteById(_routeId);
+        Route = _toploggerService.GetRouteById(_routeId);
         CommunityInfo = null;
-        CommunityInfo = await _routeService.GetRouteCommunityInfo(_routeId);
+        CommunityInfo = await _toploggerService.GetRouteCommunityInfo(_routeId);
     }
     private async Task OnBack()
     {

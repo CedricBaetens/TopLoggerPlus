@@ -2,7 +2,7 @@
 
 public class Route
 {
-    public string Id { get; set; } = null!;
+    public string Id { get; set; }
     public int Grade { get; set; }
     
     public Wall? Wall { get; set; }
@@ -13,12 +13,12 @@ public class Route
 }
 public class Wall
 {
-    public string NameLoc { get; set; } = null!;
+    public string NameLoc { get; set; }
 }
 public class HoldColor
 {
-    public string Color { get; set; } = null!;
-    public string NameLoc { get; set; } = null!;
+    public string Color { get; set; }
+    public string NameLoc { get; set; }
 }
 
 public class PagedRoutes

@@ -2,11 +2,19 @@
 
 public class User
 {
-    public string Id { get; set; } = null!;
-    public string Name { get; set; } = null!;
+    public string Id { get; set; }
+    public string FullName { get; set; }
+    public Gym Gym { get; set; }
+    public List<GymUser> GymUserFavorites { get; set; }
 }
 
-public class UsersResponse
+public class GymUser
 {
-    public List<User>? GymUsers { get; set; }
+    public string Id { get; set; }
+    public Gym Gym { get; set; }
+}
+
+public class UserMeResponse
+{
+    public User UserMe { get; set; }
 }

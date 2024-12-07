@@ -2,9 +2,10 @@
 
 public class Gym
 {
-    public string Id { get; set; } = null!;
-    public string Name { get; set; } = null!;
-    public string CountryCode { get; set; } = null!;
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string NameSlug { get; set; }
+    public string CountryCode { get; set; }
 }
 
 public class GymsResponse

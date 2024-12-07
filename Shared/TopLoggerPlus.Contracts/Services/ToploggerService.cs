@@ -6,32 +6,40 @@ using Ascend = TopLoggerPlus.Contracts.Domain.Ascend;
 
 namespace TopLoggerPlus.Contracts.Services;
 
-public interface IRouteService
+public interface IToploggerService
 {
+    Task<User> GetMyUserInfo();
+    
     Task<List<Gym>> GetGyms();
     Task<List<User>> GetUsers(string gymId);
     void SaveUserInfo(Gym gym, User user);
 
-    Task<(List<Route>? routes, DateTime syncTime)> GetRoutes(bool refresh = false);
-    Task<List<Route>?> GetBestAscends(int daysBack, bool refresh = false);
-    Route? GetRouteById(string routeId);
+    Task<(List<Route> routes, DateTime syncTime)> GetRoutes(bool refresh = false);
+    Task<List<Route>> GetBestAscends(int daysBack, bool refresh = false);
+    Route GetRouteById(string routeId);
     
-    Task<RouteCommunityInfo?> GetRouteCommunityInfo(string routeId);
+    Task<RouteCommunityInfo> GetRouteCommunityInfo(string routeId);
 
     void ClearAll();
 }
 
-public class RouteService : IRouteService
+public class ToploggerService : IToploggerService
 {
     private readonly IGraphQLService _graphQLService;
     private readonly IStorageService _storageService;
 
-    public RouteService(IGraphQLService graphQLService, IStorageService storageService)
+    public ToploggerService(IGraphQLService graphQLService, IStorageService storageService)
     {
         _graphQLService = graphQLService;
         _storageService = storageService;
     }
 
+    public async Task<User> GetMyUserInfo()
+    {
+        var user = await _graphQLService.GetMyUserInfo();
+        return new User { Id = user.Id, Name = user.FullName, GymId = user.Gym.Id };
+    }
+    
     public async Task<List<Gym>> GetGyms()
     {
         var gyms = await _graphQLService.GetGyms();
@@ -49,7 +57,7 @@ public class RouteService : IRouteService
         _storageService.Write("UserId", user.Id);
     }
 
-    public async Task<(List<Route>? routes, DateTime syncTime)> GetRoutes(bool refresh = false)
+    public async Task<(List<Route> routes, DateTime syncTime)> GetRoutes(bool refresh = false)
     {
         var gymData = await GetGymData(refresh);
         if (gymData?.Routes == null)
@@ -131,7 +139,7 @@ public class RouteService : IRouteService
         // File.WriteAllText(_processedRoutes, JsonSerializer.Serialize(processedRoutes));
         // return (processedRoutes.Where(r => !r.Deleted).ToList(), DateTime.Now);
     }
-    public async Task<List<Route>?> GetBestAscends(int daysBack, bool refresh = false)
+    public async Task<List<Route>> GetBestAscends(int daysBack, bool refresh = false)
     {
         return null;
         // var gymData = await GetGymData(refresh);
@@ -179,9 +187,9 @@ public class RouteService : IRouteService
         // }
         // return bestAscends;
     }
-    private async Task<GymData?> GetGymData(bool refresh)
+    private async Task<GymData> GetGymData(bool refresh)
     {
-        GymData? gymData;
+        GymData gymData;
         
         if (!refresh)
         {
@@ -207,13 +215,13 @@ public class RouteService : IRouteService
 
         return gymData;
     }
-    public Route? GetRouteById(string routeId)
+    public Route GetRouteById(string routeId)
     {
         var processedRoutes = _storageService.Read<List<Route>>("ProcessedRoutes");
         return processedRoutes?.FirstOrDefault(r => r.Id == routeId);
     }
     
-    public async Task<RouteCommunityInfo?> GetRouteCommunityInfo(string routeId)
+    public async Task<RouteCommunityInfo> GetRouteCommunityInfo(string routeId)
     {
         return null;
         // if (!File.Exists(_gymIdFile) || !int.TryParse(File.ReadAllText(_gymIdFile), out var gymId))
