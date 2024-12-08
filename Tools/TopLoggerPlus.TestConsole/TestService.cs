@@ -1,5 +1,4 @@
 ﻿using TopLoggerPlus.Contracts.Services.GraphQL;
-using Route = TopLoggerPlus.Contracts.Services.GraphQL.Route;
 
 namespace TopLoggerPlus.TestConsole;
 

@@ -22,21 +22,21 @@ public static class ClimbExtensions
 
         return $"{level}{letter}{details}";
     }
-    public static RouteColor GetRouteColor(this HoldColor? hold)
+    public static RouteColor GetRouteColor(this HoldColor hold)
     {
         return hold != null
             ? new RouteColor { Name = hold.NameLoc, Value = hold.Color }
             : new RouteColor { Name = "unknown", Value = "#000000" };
     }
-    
-    // public static int GetGradeWithBonus(this Services.TopLogger.Ascend ascend, int grade)
-    // {
-    //     return ascend.TopType switch
-    //     {
-    //         RouteTopType.RedPoint => grade,
-    //         RouteTopType.Flash => grade + 10,
-    //         RouteTopType.OnSight => grade + 15,
-    //         _ => 0,
-    //     };
-    // }
+    public static int? GetGradeWithBonus(this ClimbUser ascend, int grade)
+    {
+        return ascend.TickType switch
+        {
+            RouteTopType.NotTopped => null,
+            RouteTopType.RedPoint => grade,
+            RouteTopType.Flash => grade + 10,
+            RouteTopType.OnSight => grade + 15,
+            _ => null
+        };
+    }
 }

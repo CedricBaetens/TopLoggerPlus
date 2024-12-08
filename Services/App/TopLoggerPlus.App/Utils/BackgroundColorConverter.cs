@@ -7,7 +7,7 @@ public class BackgroundColorConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         var route = value as Route;
-        return route?.Ascends.Count > 0
+        return route?.AscendsInfo != null && route.AscendsInfo.TopType > 0
             ? Color.FromArgb("4CAF50")
             : Colors.Transparent;
     }

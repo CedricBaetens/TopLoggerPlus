@@ -8,8 +8,7 @@ namespace TopLoggerPlus.Contracts.Services.GraphQL;
 public interface IGraphQLService
 {
     Task<User> GetMyUserInfo();
-    Task<List<Gym>> GetGyms();
-    Task<List<Route>> GetRoutes(string gymId);
+    Task<List<Climb>> GetClimbs(string gymId, string userId);
 }
 public class GraphQLService : IGraphQLService
 {
@@ -74,50 +73,43 @@ public class GraphQLService : IGraphQLService
         var result = await SendGraphQLQueryAsync<UserMeResponse>(userMeRequest);
         return result.UserMe;
     }
-    public async Task<List<Gym>> GetGyms()
+    public async Task<List<Climb>> GetClimbs(string gymId, string userId)
     {
-        var gymsRequest = new GraphQLRequest
-        {
-            OperationName = "gyms",
-            Query = """
-                    query gyms {
-                      gyms {
-                        ...gymsItem
-                        __typename
-                      }
-                    }
-
-                    fragment gymsItem on Gym {
-                      id
-                      name
-                      countryCode
-                      __typename
-                    }
-                    """
-        };
-        var result = await SendGraphQLQueryAsync<GymsResponse>(gymsRequest);
-        return result.Gyms;
-    }
-    public async Task<List<Route>> GetRoutes(string gymId)
-    {
-        var gymsRequest = new GraphQLRequest
+        var climbsRequest = new GraphQLRequest
         {
             OperationName = "climbs",
-            Variables = new { gymId, climbType = "route" },
+            Variables = new { gymId, climbType = "route", userId },
             Query = """
-                    query climbs($gymId: ID!, $climbType: ClimbType!) {
+                    query climbs($gymId: ID!, $climbType: ClimbType!, $isReported: Boolean, $userId: ID) {
                       climbs(
                         gymId: $gymId
                         climbType: $climbType
+                        isReported: $isReported
                       ) {
                         data {
                           ...climb
+                          ...climbWithClimbUser
                           __typename
                         }
                         __typename
                       }
                     }
-
+                    
+                    fragment climbUser on ClimbUser {
+                      id
+                      climbId
+                      grade
+                      rating
+                      project
+                      votedRenew
+                      tickType
+                      totalTries
+                      triedFirstAtDate
+                      tickedFirstAtDate
+                      updatedAt
+                      __typename
+                    }
+                    
                     fragment climb on Climb {
                       id
                       climbType
@@ -137,6 +129,7 @@ public class GraphQLService : IGraphQLService
                       holds
                       height
                       overhang
+                      autobelay
                       leadEnabled
                       leadRequired
                       ratingsAverage
@@ -184,12 +177,19 @@ public class GraphQLService : IGraphQLService
                       }
                       __typename
                     }
+                    
+                    fragment climbWithClimbUser on Climb {
+                      id
+                      climbUser(userId: $userId) {
+                        ...climbUser
+                        __typename
+                      }
+                      __typename
+                    }
                     """
         };
-        // var result = await SendGraphQLQueryAsync<object>(gymsRequest);
-        // return Array.Empty<Route>();
         
-        var result = await SendGraphQLQueryAsync<RoutesResponse>(gymsRequest);
+        var result = await SendGraphQLQueryAsync<ClimbsResponse>(climbsRequest);
         return result?.Climbs?.Data;
     }
     

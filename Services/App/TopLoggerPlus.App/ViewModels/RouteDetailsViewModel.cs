@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
@@ -52,9 +53,17 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
 
     private async Task OnAppearing()
     {
-        Route = _toploggerService.GetRouteById(_routeId);
-        CommunityInfo = null;
-        CommunityInfo = await _toploggerService.GetRouteCommunityInfo(_routeId);
+        try
+        {
+            Route = _toploggerService.GetRouteById(_routeId);
+            CommunityInfo = null;
+            CommunityInfo = await _toploggerService.GetRouteCommunityInfo(_routeId);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
     }
     private async Task OnBack()
     {

@@ -2,7 +2,6 @@
 using Gym = TopLoggerPlus.Contracts.Domain.Gym;
 using User = TopLoggerPlus.Contracts.Domain.User;
 using Route = TopLoggerPlus.Contracts.Domain.Route;
-using Ascend = TopLoggerPlus.Contracts.Domain.Ascend;
 
 namespace TopLoggerPlus.Contracts.Services;
 
@@ -10,6 +9,7 @@ public interface IToploggerService
 {
     Task Login(string refreshToken);
     void Logout();
+    void ClearAll();
     
     Task<User> GetMyUserInfo();
     
@@ -18,8 +18,6 @@ public interface IToploggerService
     Route GetRouteById(string routeId);
     
     Task<RouteCommunityInfo> GetRouteCommunityInfo(string routeId);
-
-    void ClearAll();
 }
 
 public class ToploggerService : IToploggerService
@@ -43,6 +41,10 @@ public class ToploggerService : IToploggerService
     {
         _authenticationService.Logout();
     }
+    public void ClearAll()
+    {
+        _storageService.ResetStorage();
+    }
     
     public async Task<User> GetMyUserInfo()
     {
@@ -61,17 +63,11 @@ public class ToploggerService : IToploggerService
 
     public async Task<(List<Route> routes, DateTime syncTime)> GetRoutes(bool refresh = false)
     {
-        var gymData = await GetGymData(refresh);
-        if (gymData?.Routes == null)
+        var routes = await GetGymData(refresh);
+        if (routes == null)
             return (null, DateTime.Now);
         
-        var routes = gymData.Routes
-            .ToList();
-        
-        var processedRoutes = new List<Route>();
-        foreach (var apiRoute in routes)
-        {
-            var route = new Route
+        var processedRoutes = routes.Select(apiRoute => new Route
             {
                 Id = apiRoute.Id,
                 Grade = apiRoute.Grade.GetFrenchGrade(),
@@ -79,67 +75,27 @@ public class ToploggerService : IToploggerService
                 Rope = "/",
                 Wall = apiRoute.Wall?.NameLoc ?? "unknown",
                 Color = apiRoute.HoldColor.GetRouteColor(),
-                Live = apiRoute.InAt.HasValue && apiRoute.InAt.Value < DateTime.Now,
-                Deleted = apiRoute.OutAt.HasValue && apiRoute.OutAt.Value < DateTime.Now
-            };
-        
-            processedRoutes.Add(route);
-        }
-        
+                Setter = apiRoute.ClimbSetters?.FirstOrDefault()?.GymAdmin?.Name,
+                AscendsInfo = apiRoute.ClimbUser == null
+                    ? null
+                    : new AscendsInfo
+                    {
+                        MyGrade = apiRoute.ClimbUser.Grade?.GetFrenchGrade(),
+                        MyGradeNumber = apiRoute.ClimbUser.Grade,
+                        Score = apiRoute.ClimbUser.GetGradeWithBonus(apiRoute.Grade),
+                        TotalTries = apiRoute.ClimbUser.TotalTries,
+                        TopType = apiRoute.ClimbUser.TickType,
+                        TriedFirstAt = apiRoute.ClimbUser.TriedFirstAtDate,
+                        ToppedFirstAt = apiRoute.ClimbUser.TickedFirstAtDate
+                    },
+                InAt = apiRoute.InAt,
+                OutPlannedAt = apiRoute.OutPlannedAt,
+                OutAt = apiRoute.OutAt
+            })
+            .ToList();
+
         _storageService.Write("ProcessedRoutes", processedRoutes);
-        return (processedRoutes.Where(r => !r.Deleted).ToList(), DateTime.Now);
-        
-        // var gymData = await GetGymData(refresh);
-        // if (gymData?.UserUId == null || gymData?.GymDetails == null || gymData?.Routes == null || gymData?.Ascends == null)
-        //     return (null, DateTime.Now);
-        //
-        // var walls = gymData.GymDetails.Walls.ToDictionary(w => w.Id);
-        // var holds = gymData.GymDetails.Holds.ToDictionary(h => h.Id);
-        //
-        // var routes = gymData.Routes
-        //     .Where(r => walls.ContainsKey(r.WallId))
-        //     .ToList();
-        //
-        // //var opinionTask = _topLoggerService.GetOpinions(gymData.UserUId.Value, gymData.GymDetails.Id);
-        //
-        // var processedRoutes = new List<Route>();
-        // foreach (var apiRoute in routes)
-        // {
-        //     var route = new Route
-        //     {
-        //         Id = apiRoute.Id,
-        //         Grade = apiRoute.Grade.GetGradeNumber().GetFrenchGrade(),
-        //         GradeNumber = apiRoute.Grade.GetGradeNumber(),
-        //         Rope = apiRoute.RopeNumber ?? "/",
-        //         Wall = walls[apiRoute.WallId].Name,
-        //         Color = holds[apiRoute.HoldId].GetRouteColor(),
-        //         Live = apiRoute.Live,
-        //         Deleted = apiRoute.Deleted
-        //     };
-        //
-        //     // Ascend
-        //     foreach (var ascend in gymData.Ascends.Where(a => a.ClimbId == apiRoute.Id))
-        //     {
-        //         route.Ascends.Add(new Ascend
-        //         {
-        //             LoggedAt = ascend.DateLogged,
-        //             TopType = ascend.TopType
-        //         });
-        //     }
-        //
-        //     // Opinion
-        //     // var opinion = (await opinionTask).Where(o => o.ClimbId == apiRoute.Id).FirstOrDefault();
-        //     // if (opinion != null)
-        //     // {
-        //     //     route.MyGrade = opinion.Grade.GetGradeNumber().GetFrenchGrade();
-        //     //     route.MyGradeNumber = opinion.Grade.GetGradeNumber();
-        //     // }
-        //
-        //     processedRoutes.Add(route);
-        // }
-        //
-        // File.WriteAllText(_processedRoutes, JsonSerializer.Serialize(processedRoutes));
-        // return (processedRoutes.Where(r => !r.Deleted).ToList(), DateTime.Now);
+        return (processedRoutes.Where(r => !r.OutAt.HasValue || r.OutAt.Value < DateTime.Now).ToList(), DateTime.Now);
     }
     public async Task<List<Route>> GetBestAscends(int daysBack, bool refresh = false)
     {
@@ -189,32 +145,26 @@ public class ToploggerService : IToploggerService
         // }
         // return bestAscends;
     }
-    private async Task<GymData> GetGymData(bool refresh)
+    private async Task<List<Climb>> GetGymData(bool refresh)
     {
-        GymData gymData;
+        List<Climb> routes;
         
         if (!refresh)
         {
-            gymData = _storageService.Read<GymData>("GymData");
-            if (gymData != null) return gymData;
+            routes = _storageService.Read<List<GraphQL.Climb>>("RawRoutes");
+            if (routes != null) return routes;
         }
         
         var userInfo = _storageService.Read<GraphQL.User>("UserInfo");
         if (string.IsNullOrEmpty(userInfo?.Id) || string.IsNullOrEmpty(userInfo.Gym?.Id))
             return null;
 
-        var routes = await _graphQLService.GetRoutes(userInfo.Gym.Id);
-        //var ascends = await _topLoggerService.GetAscends(userId, gymDetails.Id);
+        routes = await _graphQLService.GetClimbs(userInfo.Gym.Id, userInfo.Id);
+        _storageService.Write("RawRoutes", routes);
 
-        gymData = new GymData
-        {
-            Routes = routes,
-            //Ascends = ascends
-        };
-        _storageService.Write("GymData", gymData);
-
-        return gymData;
+        return routes;
     }
+    
     public Route GetRouteById(string routeId)
     {
         var processedRoutes = _storageService.Read<List<Route>>("ProcessedRoutes");
@@ -252,10 +202,5 @@ public class ToploggerService : IToploggerService
         //     CommunityStars = stars.Any() ? string.Join(", ", stars) : "No stars",
         //     Toppers = toppers
         // };
-    }
-
-    public void ClearAll()
-    {
-        _storageService.ResetStorage();
     }
 }

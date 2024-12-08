@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
@@ -87,8 +88,16 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     private async Task OnAppearing()
     {
         IsBusy = true;
-        if (DaysBack == 0) DaysBack = 60;
-        await ShowRoutes(false);
+        try
+        {
+            if (DaysBack == 0) DaysBack = 60;
+            await ShowRoutes(false);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
         IsBusy = false;
     }
     private async Task OnDaysBackChanged()
@@ -118,10 +127,11 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         LastSynced = DateTime.Now;
         Routes = routes?
             .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(a => a.BestAttemptScore).ThenByDescending(a => a.BestAttemptDateLogged)
+            .OrderByDescending(a => a.AscendsInfo?.Score)
+            .ThenByDescending(a => a.AscendsInfo?.ToppedFirstAt)
             .Take(10).ToList();
         
-        var averageGrade = Math.Ceiling(Routes?.Average(r => r.BestAttemptScore).Value ?? 0);
+        var averageGrade = Math.Ceiling(Routes?.Average(r => r.AscendsInfo?.Score ?? 0) ?? 0);
         var level = Math.Floor(averageGrade / 100);
         (var letter, var remainder) = (averageGrade % 100) switch
         {

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
@@ -67,7 +68,15 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         _filterType = filterType;
 
         IsBusy = true;
-        await ShowRoutes(false);
+        try
+        {
+            await ShowRoutes(false);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
         IsBusy = false;
     }
     private async Task OnRefresh()
@@ -93,9 +102,9 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
                     (var routes, var syncTime) = await _toploggerService.GetRoutes(refresh);
                     LastSynced = syncTime;
                     Routes = routes?
-                                .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
-                                .OrderBy(r => r.GradeNumber).ThenBy(r => r.Rope)
-                                .ToList();
+                        .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(r => r.GradeNumber).ThenBy(r => r.Wall)
+                        .ToList();
                 }
                 break;
             case "ExpiringRoutes":
@@ -103,10 +112,10 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
                     (var routes, var syncTime) = await _toploggerService.GetRoutes(refresh);
                     LastSynced = syncTime;
                     Routes = routes?
-                                .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase)
-                                            && r.Ascends.Count > 0 && r.Ascends.All(a => a.Age > 50))
-                                .OrderByDescending(r => r.GradeNumber).ThenBy(r => r.Rope)
-                                .ToList();
+                        .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase)
+                                    && r.AscendsInfo != null && (r.OutAt.HasValue || r.OutPlannedAt.HasValue))
+                        .OrderByDescending(r => r.GradeNumber).ThenBy(r => r.Rope)
+                        .ToList();
                 }
                 break;
             default:
