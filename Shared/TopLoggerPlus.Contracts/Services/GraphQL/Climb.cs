@@ -42,7 +42,7 @@ public class ClimbUser
     public int? Grade { get; set; }
     public RouteTopType TickType { get; set; }
     public int TotalTries { get; set; }
-    public DateTime TriedFirstAtDate { get; set; }
+    public DateTime? TriedFirstAtDate { get; set; }
     public DateTime? TickedFirstAtDate { get; set; }
 }
 
