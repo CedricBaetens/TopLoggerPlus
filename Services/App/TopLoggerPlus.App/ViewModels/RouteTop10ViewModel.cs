@@ -1,12 +1,13 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
 public class RouteTop10ViewModel : INotifyPropertyChanged
 {
-    private readonly IRouteService _routeService;
+    private readonly IToploggerService _toploggerService;
 
     private bool _isBusy;
     public bool IsBusy
@@ -15,7 +16,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _isBusy = value;
-            OnPropertyChanged(nameof(IsBusy));
+            OnPropertyChanged();
         }
     }
 
@@ -26,7 +27,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _daysBack = value;
-            OnPropertyChanged(nameof(DaysBack));
+            OnPropertyChanged();
         }
     }
 
@@ -37,7 +38,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _averageGrade = value;
-            OnPropertyChanged(nameof(AverageGrade));
+            OnPropertyChanged();
         }
     }
 
@@ -48,7 +49,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _lastSynced = value;
-            OnPropertyChanged(nameof(LastSynced));
+            OnPropertyChanged();
         }
     }
 
@@ -59,7 +60,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _routes = value;
-            OnPropertyChanged(nameof(Routes));
+            OnPropertyChanged();
         }
     }
 
@@ -70,7 +71,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         set
         {
             _selectedRoute = value;
-            OnPropertyChanged(nameof(SelectedRoute));
+            OnPropertyChanged();
         }
     }
 
@@ -79,16 +80,24 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     public ICommand Refresh => new Command(async () => await OnRefresh());
     public ICommand Selected => new Command(async () => await OnSelected(SelectedRoute));
 
-    public RouteTop10ViewModel(IRouteService routeService)
+    public RouteTop10ViewModel(IToploggerService toploggerService)
     {
-        _routeService = routeService;
+        _toploggerService = toploggerService;
     }
 
     private async Task OnAppearing()
     {
         IsBusy = true;
-        if (DaysBack == 0) DaysBack = 60;
-        await ShowRoutes(false);
+        try
+        {
+            if (DaysBack == 0) DaysBack = 60;
+            await ShowRoutes(false);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
         IsBusy = false;
     }
     private async Task OnDaysBackChanged()
@@ -100,7 +109,15 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     private async Task OnRefresh()
     {
         IsBusy = true;
-        await ShowRoutes(true);
+        try
+        {
+            await ShowRoutes(true);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
         IsBusy = false;
     }
     private async Task OnSelected(Route selectedRoute)
@@ -113,15 +130,16 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
 
     private async Task ShowRoutes(bool refresh)
     {
-        var routes = await _routeService.GetBestAscends(DaysBack, refresh);
+        var routes = await _toploggerService.GetBestAscends(DaysBack, refresh);
 
         LastSynced = DateTime.Now;
         Routes = routes?
             .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(a => a.BestAttemptScore).ThenByDescending(a => a.BestAttemptDateLogged)
+            .OrderByDescending(a => a.AscendsInfo?.Score)
+            .ThenByDescending(a => a.AscendsInfo?.ToppedFirstAt)
             .Take(10).ToList();
         
-        var averageGrade = Math.Ceiling(Routes?.Average(r => r.BestAttemptScore).Value ?? 0);
+        var averageGrade = Math.Ceiling(Routes?.Average(r => r.AscendsInfo?.Score ?? 0) ?? 0);
         var level = Math.Floor(averageGrade / 100);
         (var letter, var remainder) = (averageGrade % 100) switch
         {

@@ -1,52 +1,54 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:domain="clr-namespace:TopLoggerPlus.Contracts.Domain;assembly=TopLoggerPlus.Contracts"
              xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
+             xmlns:viewModels="clr-namespace:TopLoggerPlus.App.ViewModels"
              x:Class="TopLoggerPlus.App.Pages.RouteDetailsPage"
-             Title="{Binding Route}">
+             Title="{Binding Route}" x:DataType="viewModels:RouteDetailsViewModel">
 
     <ContentPage.Resources>
         <utils:RouteColorConverter x:Key="RouteColorConverter"/>
     </ContentPage.Resources>
     
     <ContentPage.Content>
-        <StackLayout>
-            <Label Text="{Binding Route.Rope, StringFormat='Rope: {0}'}"/>
-            <Label Text="{Binding Route.Grade, StringFormat='Grade: {0}'}"/>
-            <Label Text="{Binding Route.Wall, StringFormat='Wall: {0}'}"/>
-            <HorizontalStackLayout>
-                <Label Text="Color: "/>
-                <Ellipse Fill="{Binding Route.Color.Value, Converter={StaticResource RouteColorConverter}}"
-                         WidthRequest="20" HeightRequest="20" Margin="10,0,0,0"/>
-            </HorizontalStackLayout>
+        <StackLayout Padding="10">
+            <Label Text="Route Info"/>
+            <StackLayout Padding="10, 0, 10, 0">
+                <Label Text="{Binding Route.Setter, StringFormat='Setter: {0}'}" Margin="0,5,0,0"/>
+                <Label Text="{Binding Route.Rope, StringFormat='Rope: {0}'}" Margin="0,5,0,0"/>
+                <Label Text="{Binding Route.Grade, StringFormat='Grade: {0}'}" Margin="0,5,0,0"/>
+                <Label Text="{Binding Route.Wall, StringFormat='Wall: {0}'}" Margin="0,5,0,0"/>
+                <HorizontalStackLayout Margin="0,5,0,0">
+                    <Label Text="Color: "/>
+                    <Ellipse Fill="{Binding Route.Color.Value, Converter={StaticResource RouteColorConverter}}"
+                             WidthRequest="20" HeightRequest="20" Margin="10,0,0,0"/>
+                </HorizontalStackLayout>
+            </StackLayout>
 
-            <Label Text="{Binding Route.Ascends.Count, StringFormat='Ascends: {0}'}" Margin="0,10,0,0"/>
-            <ListView ItemsSource="{Binding Route.Ascends}" VerticalOptions="Start" Margin="10,0,0,0">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <ViewCell>
-                            <HorizontalStackLayout>
-                                <Label VerticalOptions="Center" Text="{Binding LoggedAt, StringFormat='✓ {0:dd/MM/yyyy} '}"/>
-                                <Label VerticalOptions="Center" Text="{Binding Age, StringFormat=' ({0:0}d)'}"/>
-                                <Label VerticalOptions="Center" Text="{Binding TopType, StringFormat=' {0}'}"/>
-                            </HorizontalStackLayout>
-                        </ViewCell>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+            <Label Text="Ascends Info" Margin="0,20,0,0"/>
+            <StackLayout Padding="10, 0, 10, 0">
+                <Label Text="{Binding Route.AscendsInfo.TotalTries, StringFormat='Tries: {0}'}" Margin="0,5,0,0"/>
+                <Label Text="{Binding Route.AscendsInfo.TopType, StringFormat='TopType: {0}'}" Margin="0,5,0,0"/>
+                <Label Text="{Binding Route.AscendsInfo.TriedFirstAt, StringFormat='First try: ✓ {0:dd/MM/yyyy}'}" Margin="0,5,0,0"/>
+                <Label Text="{Binding Route.AscendsInfo.ToppedFirstAt, StringFormat='First top: ✓ {0:dd/MM/yyyy}'}" Margin="0,5,0,0"/>
+                <Label Text="{Binding Route.AscendsInfo.Score, StringFormat='Score: {0}'}" Margin="0,5,0,0"/>
+            </StackLayout>
 
-            <Label Text="Community Info" Margin="0,10,0,0"/>
-            <Label Text="{Binding CommunityInfo.CommunityGrades, StringFormat='Grades: {0}'}" Margin="10,0,0,0"/>
-            <Label Text="{Binding CommunityInfo.CommunityStars, StringFormat='Stars: {0}'}" Margin="10,0,0,0"/>
-            <ListView ItemsSource="{Binding CommunityInfo.Toppers}" Margin="10,10,0,0">
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <ViewCell>
-                            <Label VerticalOptions="Center" Text="{Binding ., StringFormat='✓ {0}'}"/>
-                        </ViewCell>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+            <Label Text="Community Info" Margin="0,20,0,0"/>
+            <StackLayout Padding="10, 0, 10, 0">
+                <Label Text="{Binding CommunityInfo.CommunityGrades, StringFormat='Grades: {0}'}" Margin="5,0,0,0"/>
+                <Label Text="{Binding CommunityInfo.CommunityStars, StringFormat='Stars: {0}'}" Margin="5,0,0,0"/>
+                <ListView ItemsSource="{Binding CommunityInfo.Toppers}" Margin="10,5,0,0">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="domain:User">
+                            <ViewCell>
+                                <Label VerticalOptions="Center" Text="{Binding Name, StringFormat='✓ {0}'}"/>
+                            </ViewCell>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackLayout>
             
             <Button Text="Back" Command="{Binding Back}" Margin="10" 
                    BackgroundColor="{StaticResource Primary}" TextColor="{StaticResource White}"/>

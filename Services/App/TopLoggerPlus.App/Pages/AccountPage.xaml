@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewModels="clr-namespace:TopLoggerPlus.App.ViewModels"
+             x:Class="TopLoggerPlus.App.Pages.AccountPage"
+             Title="Account" x:DataType="viewModels:AccountViewModel">
+    <ContentPage.Content>
+        <StackLayout Padding="10">
+            <Label Text="{Binding User.Name, StringFormat='User: {0}'}"/>
+            <Label Text="{Binding User.Gym.Name, StringFormat='Selected Gym: {0}'}"/>
+            <Picker Title="Favorite Gyms" ItemsSource="{Binding User.FavoriteGyms}" SelectedItem="{Binding SelectedGym}"/>
+            <Button 
+                Text="Logout" 
+                Command="{Binding Logout}"
+                BackgroundColor="{StaticResource Primary}" 
+                TextColor="{StaticResource White}" />
+            <Button 
+                Text="Clear Data" 
+                Command="{Binding ClearData}"
+                BackgroundColor="{StaticResource Primary}" 
+                TextColor="{StaticResource White}" />
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>

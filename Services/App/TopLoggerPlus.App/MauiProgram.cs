@@ -1,5 +1,5 @@
-﻿using Refit;
-using TopLoggerPlus.Contracts.Services.TopLogger;
+﻿using TopLoggerPlus.App.Utils;
+using TopLoggerPlus.Contracts.Services.GraphQL;
 
 namespace TopLoggerPlus.App;
 
@@ -18,8 +18,11 @@ public static class MauiProgram
 
         builder.Services.AddTransient<AppShellViewModel>();
 
-        builder.Services.AddSingleton<UserSelectPage>();
-        builder.Services.AddTransient<UserSelectViewModel>();
+        builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<LoginViewModel>();
+        
+        builder.Services.AddSingleton<AccountPage>();
+        builder.Services.AddTransient<AccountViewModel>();
 
         builder.Services.AddSingleton<AllRoutesPage>();
         builder.Services.AddSingleton<ExpiringRoutesPage>();
@@ -31,10 +34,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<RouteDetailsPage>();
         builder.Services.AddTransient<RouteDetailsViewModel>();
 
-        builder.Services.AddSingleton<IRouteService, RouteService>();
-        builder.Services.AddTransient<ITopLoggerService, TopLoggerService>();
-        builder.Services.AddRefitClient<ITopLoggerApi>()
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.toplogger.nu"));
+        builder.Services.AddSingleton<IToploggerService, ToploggerService>();
+        builder.Services.AddTransient<IGraphQLService, GraphQLService>();
+        builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
+        builder.Services.AddTransient<IStorageService, StorageService>();
+        builder.Services.AddSingleton<IDialogService, DialogService>();
 
         return builder.Build();
     }

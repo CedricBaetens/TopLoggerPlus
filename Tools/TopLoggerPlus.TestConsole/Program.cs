@@ -1,5 +1,5 @@
-﻿using Refit;
-using Serilog;
+﻿using Serilog;
+using TopLoggerPlus.Contracts.Services.GraphQL;
 
 var host = Host.CreateDefaultBuilder(args)
     .UseSerilog((context, configuration) =>
@@ -12,12 +12,9 @@ var host = Host.CreateDefaultBuilder(args)
     {
         services.AddHostedService<TestConsoleRunner>();
         services.AddTransient<ITestService, TestService>();
-
-        services.AddTransient<ITopLoggerService, TopLoggerService>();
-        services.AddRefitClient<ITopLoggerApi>()
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://api.toplogger.nu"));
-
-        services.AddTransient<IRouteService, RouteService>();
+        services.AddTransient<IGraphQLService, GraphQLService>();
+        services.AddTransient<IAuthenticationService, AuthenticationService>();
+        services.AddTransient<IStorageService, StorageService>();
     })
     .Build();
 

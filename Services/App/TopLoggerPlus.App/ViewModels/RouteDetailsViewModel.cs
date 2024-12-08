@@ -1,22 +1,23 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
 [QueryProperty(nameof(RouteId), nameof(RouteId))]
 public class RouteDetailsViewModel : INotifyPropertyChanged
 {
-    private readonly IRouteService _routeService;
+    private readonly IToploggerService _toploggerService;
 
-    private int _routeId;
-    public int RouteId
+    private string _routeId;
+    public string RouteId
     {
         get => _routeId;
         set
         {
             _routeId = value;
-            OnPropertyChanged(nameof(RouteId));
+            OnPropertyChanged();
         }
     }
 
@@ -27,7 +28,7 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
         set
         {
             _route = value;
-            OnPropertyChanged(nameof(Route));
+            OnPropertyChanged();
         }
     }
 
@@ -38,23 +39,31 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
         set
         {
             _communityInfo = value;
-            OnPropertyChanged(nameof(CommunityInfo));
+            OnPropertyChanged();
         }
     }
 
     public ICommand Appearing => new Command(async () => await OnAppearing());
     public ICommand Back => new Command(async () => await OnBack());
 
-    public RouteDetailsViewModel(IRouteService routeService)
+    public RouteDetailsViewModel(IToploggerService toploggerService)
     {
-        _routeService = routeService;
+        _toploggerService = toploggerService;
     }
 
     private async Task OnAppearing()
     {
-        Route = _routeService.GetRouteById(_routeId);
-        CommunityInfo = null;
-        CommunityInfo = await _routeService.GetRouteCommunityInfo(_routeId);
+        try
+        {
+            Route = _toploggerService.GetRouteById(_routeId);
+            CommunityInfo = null;
+            CommunityInfo = await _toploggerService.GetRouteCommunityInfo(_routeId);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
     }
     private async Task OnBack()
     {

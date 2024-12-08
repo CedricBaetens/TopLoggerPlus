@@ -6,7 +6,7 @@ public partial class AppShell : Shell
 	{
 		InitializeComponent();
 		BindingContext = vm;
-		MainShell.CurrentItem = AllRouteShell;
+		MainShell.GoToAsync($"//{nameof(AllRoutesPage)}");
 
         Routing.RegisterRoute(nameof(RouteDetailsPage), typeof(RouteDetailsPage));
     }
