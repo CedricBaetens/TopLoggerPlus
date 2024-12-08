@@ -17,7 +17,7 @@
     <ApplicationId Condition="$(TargetFramework.Contains('-windows'))">E94D9134-9937-44A3-A123-436CE4F78C08</ApplicationId>
 
     <!-- Versions -->
-    <ApplicationDisplayVersion>2.0</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion>2.0.1</ApplicationDisplayVersion>
     <ApplicationVersion>2</ApplicationVersion>
 
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
