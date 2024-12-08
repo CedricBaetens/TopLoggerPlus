@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.App.Utils;
 using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
@@ -8,6 +9,7 @@ namespace TopLoggerPlus.App.ViewModels;
 public class RouteOverviewViewModel : INotifyPropertyChanged
 {
     private readonly IToploggerService _toploggerService;
+    private readonly IDialogService _dialogService;
     private string _filterType;
 
     private bool _isBusy;
@@ -58,9 +60,10 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
     public ICommand Refresh => new Command(async () => await OnRefresh());
     public ICommand Selected => new Command(async () => await OnSelected(SelectedRoute));
 
-    public RouteOverviewViewModel(IToploggerService toploggerService)
+    public RouteOverviewViewModel(IToploggerService toploggerService, IDialogService dialogService)
     {
         _toploggerService = toploggerService;
+        _dialogService = dialogService;
     }
 
     private async Task OnAppearing(string filterType)
@@ -129,7 +132,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
             default:
                 {
                     Routes = null;
-                    await Application.Current.MainPage.DisplayAlert("Route refresh failed", "", "Ok");
+                    await _dialogService.DisplayAlert("Route refresh failed");
                 }
                 break;
         }

@@ -99,6 +99,10 @@ public class ToploggerService : IToploggerService
     }
     public async Task<List<Route>> GetBestAscends(int daysBack, bool refresh = false)
     {
+        var routes = await GetGymData(refresh);
+        if (routes == null)
+            return null;
+
         return null;
         // var gymData = await GetGymData(refresh);
         // if (gymData?.UserUId == null || gymData?.GymDetails == null || gymData?.Routes == null || gymData?.Ascends == null)
@@ -171,9 +175,9 @@ public class ToploggerService : IToploggerService
         return processedRoutes?.FirstOrDefault(r => r.Id == routeId);
     }
     
-    public async Task<RouteCommunityInfo> GetRouteCommunityInfo(string routeId)
+    public Task<RouteCommunityInfo> GetRouteCommunityInfo(string routeId)
     {
-        return null;
+        return Task.FromResult<RouteCommunityInfo>(null);
         // if (!File.Exists(_gymIdFile) || !int.TryParse(File.ReadAllText(_gymIdFile), out var gymId))
         //     return null;
         //

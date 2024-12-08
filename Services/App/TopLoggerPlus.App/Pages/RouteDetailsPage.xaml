@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:domain="clr-namespace:TopLoggerPlus.Contracts.Domain;assembly=TopLoggerPlus.Contracts"
              xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
+             xmlns:viewModels="clr-namespace:TopLoggerPlus.App.ViewModels"
              x:Class="TopLoggerPlus.App.Pages.RouteDetailsPage"
-             Title="{Binding Route}">
+             Title="{Binding Route}" x:DataType="viewModels:RouteDetailsViewModel">
 
     <ContentPage.Resources>
         <utils:RouteColorConverter x:Key="RouteColorConverter"/>
@@ -39,9 +41,9 @@
                 <Label Text="{Binding CommunityInfo.CommunityStars, StringFormat='Stars: {0}'}" Margin="5,0,0,0"/>
                 <ListView ItemsSource="{Binding CommunityInfo.Toppers}" Margin="10,5,0,0">
                     <ListView.ItemTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="domain:User">
                             <ViewCell>
-                                <Label VerticalOptions="Center" Text="{Binding ., StringFormat='✓ {0}'}"/>
+                                <Label VerticalOptions="Center" Text="{Binding Name, StringFormat='✓ {0}'}"/>
                             </ViewCell>
                         </DataTemplate>
                     </ListView.ItemTemplate>

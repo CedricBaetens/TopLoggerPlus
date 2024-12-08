@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.App.Utils;
 using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
@@ -8,6 +9,7 @@ namespace TopLoggerPlus.App.ViewModels;
 public class LoginViewModel : INotifyPropertyChanged
 {
     private readonly IToploggerService _toploggerService;
+    private readonly IDialogService _dialogService;
 
     private string _refreshToken;
     public string RefreshToken
@@ -22,9 +24,10 @@ public class LoginViewModel : INotifyPropertyChanged
     
     public ICommand Login => new Command(async () => await OnLogin());
     
-    public LoginViewModel(IToploggerService toploggerService)
+    public LoginViewModel(IToploggerService toploggerService, IDialogService dialogService)
     {
         _toploggerService = toploggerService;
+        _dialogService = dialogService;
     }
     
     private async Task OnLogin()
@@ -38,7 +41,7 @@ public class LoginViewModel : INotifyPropertyChanged
         }
         catch (AuthenticationFailedException e)
         {
-            await Application.Current.MainPage.DisplayAlert("Authentication failed", e.Message, "Ok");
+            await _dialogService.DisplayAlert("Authentication failed", e.Message);
         }
     }
     

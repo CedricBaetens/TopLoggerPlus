@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.App.Utils;
 using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
@@ -8,6 +9,7 @@ namespace TopLoggerPlus.App.ViewModels;
 public class AccountViewModel : INotifyPropertyChanged
 {
     private IToploggerService _toploggerService;
+    private readonly IDialogService _dialogService;
 
     private User _user;
     public User User
@@ -34,9 +36,10 @@ public class AccountViewModel : INotifyPropertyChanged
     public ICommand Logout => new Command(async () => await OnLogout());
     public ICommand ClearData => new Command(async () => await OnClearData());
 
-    public AccountViewModel(IToploggerService toploggerService)
+    public AccountViewModel(IToploggerService toploggerService, IDialogService dialogService)
     {
         _toploggerService = toploggerService;
+        _dialogService = dialogService;
     }
 
     private async Task OnAppearing()
@@ -60,7 +63,7 @@ public class AccountViewModel : INotifyPropertyChanged
     private async Task OnClearData()
     {
         _toploggerService.ClearAll();
-        await Application.Current.MainPage.DisplayAlert("All info cleared", "", "Ok");
+        await _dialogService.DisplayAlert("All info cleared");
         await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
     }
 

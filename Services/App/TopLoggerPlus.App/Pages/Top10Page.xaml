@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:domain="clr-namespace:TopLoggerPlus.Contracts.Domain;assembly=TopLoggerPlus.Contracts"
              xmlns:utils="clr-namespace:TopLoggerPlus.App.Utils"
+             xmlns:viewModels="clr-namespace:TopLoggerPlus.App.ViewModels"
              x:Class="TopLoggerPlus.App.Pages.Top10Page"
-             Title="Top 10">
+             Title="Top 10" x:DataType="viewModels:RouteTop10ViewModel">
     <ContentPage.Resources>
         <utils:BackgroundColorConverter x:Key="BackgroundColorConverter"/>
         <utils:RouteColorConverter x:Key="RouteColorConverter"/>
@@ -20,10 +22,10 @@
             <Label Text="{Binding AverageGrade}" Margin="10,10,10,10" HorizontalTextAlignment="Center"/>
             <ListView ItemsSource="{Binding Routes}" SelectedItem="{Binding SelectedRoute}"
                   IsPullToRefreshEnabled="True" RefreshCommand="{Binding Refresh}"
-                  IsRefreshing="{Binding IsBusy, Mode=OneWay}" CachingStrategy="RecycleElementAndDataTemplate"
+                  IsRefreshing="{Binding IsBusy}" CachingStrategy="RecycleElementAndDataTemplate"
                   ItemSelected="ListView_ItemSelected">
                 <ListView.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="domain:Route">
                         <ViewCell>
                             <HorizontalStackLayout  Margin="1,1,1,1">
                                 <Ellipse Fill="{Binding Color.Value, Converter={StaticResource RouteColorConverter}}"

@@ -109,7 +109,15 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     private async Task OnRefresh()
     {
         IsBusy = true;
-        await ShowRoutes(true);
+        try
+        {
+            await ShowRoutes(true);
+        }
+        catch (AuthenticationFailedException)
+        {
+            await Task.Delay(100);
+            await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
         IsBusy = false;
     }
     private async Task OnSelected(Route selectedRoute)

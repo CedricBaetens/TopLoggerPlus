@@ -33,7 +33,7 @@ public class StorageService : IStorageService
     public void Write<T>(string key, T value)
     {
         var path = Path.Combine(_directory, $"{key}.txt");
-        File.WriteAllText(path, JsonSerializer.Serialize(value));
+        File.WriteAllText(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
     }
     public void Delete(string key)
     {
