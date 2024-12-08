@@ -157,7 +157,7 @@ public class ToploggerService : IToploggerService
         
         var userInfo = _storageService.Read<GraphQL.User>("UserInfo");
         if (string.IsNullOrEmpty(userInfo?.Id) || string.IsNullOrEmpty(userInfo.Gym?.Id))
-            return null;
+            throw new AuthenticationFailedException("No user found");
 
         routes = await _graphQLService.GetClimbs(userInfo.Gym.Id, userInfo.Id);
         _storageService.Write("RawRoutes", routes);
