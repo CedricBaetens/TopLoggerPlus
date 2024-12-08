@@ -195,17 +195,24 @@ public class GraphQLService : IGraphQLService
     
     private async Task<T> SendGraphQLQueryAsync<T>(GraphQLRequest request)
     {
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {await _authenticationService.GetAccessToken()}");
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {await _authenticationService.GetAccessToken()}");
         
-        using var graphQLClient = new GraphQLHttpClient("https://app.toplogger.nu/graphql", new NewtonsoftJsonSerializer(), httpClient);
-        var response = await graphQLClient.SendQueryAsync<T>(request);
-        if (response.Errors == null)
-            return response.Data;
+            using var graphQLClient = new GraphQLHttpClient("https://app.toplogger.nu/graphql", new NewtonsoftJsonSerializer(), httpClient);
+            var response = await graphQLClient.SendQueryAsync<T>(request);
+            if (response.Errors == null)
+                return response.Data;
         
-        var message = JsonConvert.SerializeObject(response.Errors, Formatting.Indented);
-        if (message.Contains("UNAUTHENTICATED"))
-            throw new AuthenticationFailedException(message);
-        throw new GraphQLFailedException(message);
+            var message = JsonConvert.SerializeObject(response.Errors, Formatting.Indented);
+            if (message.Contains("UNAUTHENTICATED"))
+                throw new AuthenticationFailedException(message);
+            throw new GraphQLFailedException(message);
+        }
+        catch (Exception e)
+        {
+            throw new GraphQLFailedException("GraphQL Failed", e);
+        }
     }
 }

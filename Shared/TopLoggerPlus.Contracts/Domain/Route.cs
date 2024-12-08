@@ -39,6 +39,6 @@ public class AscendsInfo
     
     public int TotalTries { get; set; }
     public RouteTopType TopType { get; set; }
-    public DateTime TriedFirstAt { get; set; }
+    public DateTime? TriedFirstAt { get; set; }
     public DateTime? ToppedFirstAt { get; set; }
 }
