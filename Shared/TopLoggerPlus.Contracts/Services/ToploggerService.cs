@@ -20,36 +20,30 @@ public interface IToploggerService
     Task<RouteCommunityInfo> GetRouteCommunityInfo(string routeId);
 }
 
-public class ToploggerService : IToploggerService
+public class ToploggerService(
+    IGraphQLService graphQLService,
+    IAuthenticationService authenticationService,
+    IStorageService storageService,
+    HttpClient httpClient)
+    : IToploggerService
 {
-    private readonly IGraphQLService _graphQLService;
-    private readonly IAuthenticationService _authenticationService;
-    private readonly IStorageService _storageService;
-
-    public ToploggerService(IGraphQLService graphQLService, IAuthenticationService authenticationService, IStorageService storageService)
-    {
-        _graphQLService = graphQLService;
-        _authenticationService = authenticationService;
-        _storageService = storageService;
-    }
-
     public async Task Login(string refreshToken)
     {
-        await _authenticationService.RefreshAccessToken(refreshToken);
+        await authenticationService.RefreshAccessToken(refreshToken);
     }
     public void Logout()
     {
-        _authenticationService.Logout();
+        authenticationService.Logout();
     }
     public void ClearAll()
     {
-        _storageService.ResetStorage();
+        storageService.ResetStorage();
     }
     
     public async Task<User> GetMyUserInfo()
     {
-        var userInfo = await _graphQLService.GetMyUserInfo();
-        _storageService.Write("UserInfo", userInfo);
+        var userInfo = await graphQLService.GetMyUserInfo();
+        storageService.Write("UserInfo", userInfo);
         return new User
         {
             Id = userInfo.Id,
@@ -63,7 +57,7 @@ public class ToploggerService : IToploggerService
 
     public async Task<(List<Route> routes, DateTime syncTime)> GetRoutes(bool refresh = false)
     {
-        var routes = await GetGymData(refresh);
+        var (routes, ropeNumbers) = await GetGymData(refresh);
         if (routes == null)
             return (null, DateTime.Now);
         
@@ -72,7 +66,7 @@ public class ToploggerService : IToploggerService
                 Id = apiRoute.Id,
                 Grade = apiRoute.Grade.GetFrenchGrade(),
                 GradeNumber = apiRoute.Grade,
-                Rope = "/",
+                Rope = apiRoute.GetRopeNumber(ropeNumbers),
                 Wall = apiRoute.Wall?.NameLoc ?? "unknown",
                 Color = apiRoute.HoldColor.GetRouteColor(),
                 Setter = apiRoute.ClimbSetters?.FirstOrDefault()?.GymAdmin?.Name,
@@ -94,12 +88,12 @@ public class ToploggerService : IToploggerService
             })
             .ToList();
 
-        _storageService.Write("ProcessedRoutes", processedRoutes);
+        storageService.Write("ProcessedRoutes", processedRoutes);
         return (processedRoutes.Where(r => !r.OutAt.HasValue || r.OutAt.Value < DateTime.Now).ToList(), DateTime.Now);
     }
     public async Task<List<Route>> GetBestAscends(int daysBack, bool refresh = false)
     {
-        var routes = await GetGymData(refresh);
+        var (routes, ropeNumbers) = await GetGymData(refresh);
         if (routes == null)
             return null;
 
@@ -149,29 +143,54 @@ public class ToploggerService : IToploggerService
         // }
         // return bestAscends;
     }
-    private async Task<List<Climb>> GetGymData(bool refresh)
+    private async Task<(List<Climb>, List<RopeNumber>)> GetGymData(bool refresh)
     {
-        List<Climb> routes;
+        List<Climb> routes = [];
+        List<RopeNumber> ropeNumbers;
         
         if (!refresh)
         {
-            routes = _storageService.Read<List<GraphQL.Climb>>("RawRoutes");
-            if (routes != null) return routes;
+            routes = storageService.Read<List<GraphQL.Climb>>("RawRoutes");
+            ropeNumbers = storageService.Read<List<RopeNumber>>("RopeNumbers");
+            if (routes != null) return (routes, ropeNumbers);
         }
         
-        var userInfo = _storageService.Read<GraphQL.User>("UserInfo");
+        var userInfo = storageService.Read<GraphQL.User>("UserInfo");
         if (string.IsNullOrEmpty(userInfo?.Id) || string.IsNullOrEmpty(userInfo.Gym?.Id))
             throw new AuthenticationFailedException("No user found");
+        
+        routes = await graphQLService.GetClimbs(userInfo.Gym.Id, userInfo.Id);
+        storageService.Write("RawRoutes", routes);
 
-        routes = await _graphQLService.GetClimbs(userInfo.Gym.Id, userInfo.Id);
-        _storageService.Write("RawRoutes", routes);
+        try
+        {
+            var response = await httpClient.GetAsync("https://github.com/CedricBaetens/TopLoggerPlus/raw/refs/heads/master/Content/klimax.csv");
+            var content = await response.Content.ReadAsStringAsync();
+            ropeNumbers = content.Split('\n')
+                .Select(record => record.Split(';'))
+                .Where(fields => fields.Length == 4)
+                .Select(fields => new RopeNumber
+                {
+                    Wall = fields[0],
+                    Color = fields[1],
+                    Grade = int.TryParse(fields[2], out var grade) ? grade : 0,
+                    Number = int.TryParse(fields[3], out var number) ? number : 0,
+                })
+                .ToList();
+            storageService.Write("RopeNumbers", ropeNumbers);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            ropeNumbers = null;
+        }
 
-        return routes;
+        return (routes, ropeNumbers);
     }
     
     public Route GetRouteById(string routeId)
     {
-        var processedRoutes = _storageService.Read<List<Route>>("ProcessedRoutes");
+        var processedRoutes = storageService.Read<List<Route>>("ProcessedRoutes");
         return processedRoutes?.FirstOrDefault(r => r.Id == routeId);
     }
     

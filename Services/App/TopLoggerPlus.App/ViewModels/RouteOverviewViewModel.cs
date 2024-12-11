@@ -6,10 +6,8 @@ using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
-public class RouteOverviewViewModel : INotifyPropertyChanged
+public class RouteOverviewViewModel(IToploggerService toploggerService, IDialogService dialogService) : INotifyPropertyChanged
 {
-    private readonly IToploggerService _toploggerService;
-    private readonly IDialogService _dialogService;
     private string _filterType;
 
     private bool _isBusy;
@@ -60,12 +58,6 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
     public ICommand Refresh => new Command(async () => await OnRefresh());
     public ICommand Selected => new Command(async () => await OnSelected(SelectedRoute));
 
-    public RouteOverviewViewModel(IToploggerService toploggerService, IDialogService dialogService)
-    {
-        _toploggerService = toploggerService;
-        _dialogService = dialogService;
-    }
-
     private async Task OnAppearing(string filterType)
     {
         _filterType = filterType;
@@ -80,6 +72,10 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
             await Task.Delay(100);
             await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
         }
+        catch (TopLoggerPlusException ex)
+        {
+            await dialogService.DisplayAlert("Refresh failed", ex.Message);
+        }
         IsBusy = false;
     }
     private async Task OnRefresh()
@@ -93,6 +89,10 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         {
             await Task.Delay(100);
             await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
+        catch (TopLoggerPlusException ex)
+        {
+            await dialogService.DisplayAlert("Refresh failed", ex.Message);
         }
         IsBusy = false;
     }
@@ -110,7 +110,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
         {
             case "AllRoutes":
                 {
-                    (var routes, var syncTime) = await _toploggerService.GetRoutes(refresh);
+                    (var routes, var syncTime) = await toploggerService.GetRoutes(refresh);
                     LastSynced = syncTime;
                     Routes = routes?
                         .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
@@ -120,7 +120,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
                 break;
             case "ExpiringRoutes":
                 {
-                    (var routes, var syncTime) = await _toploggerService.GetRoutes(refresh);
+                    (var routes, var syncTime) = await toploggerService.GetRoutes(refresh);
                     LastSynced = syncTime;
                     Routes = routes?
                         .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase)
@@ -132,7 +132,7 @@ public class RouteOverviewViewModel : INotifyPropertyChanged
             default:
                 {
                     Routes = null;
-                    await _dialogService.DisplayAlert("Route refresh failed");
+                    await dialogService.DisplayAlert("Route refresh failed");
                 }
                 break;
         }

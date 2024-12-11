@@ -1,14 +1,13 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.App.Utils;
 using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
-public class RouteTop10ViewModel : INotifyPropertyChanged
+public class RouteTop10ViewModel(IToploggerService toploggerService, IDialogService dialogService) : INotifyPropertyChanged
 {
-    private readonly IToploggerService _toploggerService;
-
     private bool _isBusy;
     public bool IsBusy
     {
@@ -80,11 +79,6 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
     public ICommand Refresh => new Command(async () => await OnRefresh());
     public ICommand Selected => new Command(async () => await OnSelected(SelectedRoute));
 
-    public RouteTop10ViewModel(IToploggerService toploggerService)
-    {
-        _toploggerService = toploggerService;
-    }
-
     private async Task OnAppearing()
     {
         IsBusy = true;
@@ -97,6 +91,10 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
         {
             await Task.Delay(100);
             await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
+        catch (TopLoggerPlusException ex)
+        {
+            await dialogService.DisplayAlert("Refresh failed", ex.Message);
         }
         IsBusy = false;
     }
@@ -118,6 +116,10 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
             await Task.Delay(100);
             await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
         }
+        catch (TopLoggerPlusException ex)
+        {
+            await dialogService.DisplayAlert("Refresh failed", ex.Message);
+        }
         IsBusy = false;
     }
     private async Task OnSelected(Route selectedRoute)
@@ -130,7 +132,7 @@ public class RouteTop10ViewModel : INotifyPropertyChanged
 
     private async Task ShowRoutes(bool refresh)
     {
-        var routes = await _toploggerService.GetBestAscends(DaysBack, refresh);
+        var routes = await toploggerService.GetBestAscends(DaysBack, refresh);
 
         LastSynced = DateTime.Now;
         Routes = routes?

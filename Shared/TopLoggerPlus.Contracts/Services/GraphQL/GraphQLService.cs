@@ -10,15 +10,8 @@ public interface IGraphQLService
     Task<User> GetMyUserInfo();
     Task<List<Climb>> GetClimbs(string gymId, string userId);
 }
-public class GraphQLService : IGraphQLService
+public class GraphQLService(IAuthenticationService authenticationService) : IGraphQLService
 {
-    private readonly IAuthenticationService _authenticationService;
-
-    public GraphQLService(IAuthenticationService authenticationService)
-    {
-        _authenticationService = authenticationService;
-    }
-
     public async Task<User> GetMyUserInfo()
     {
         var userMeRequest = new GraphQLRequest
@@ -198,7 +191,7 @@ public class GraphQLService : IGraphQLService
         try
         {
             using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {await _authenticationService.GetAccessToken()}");
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {await authenticationService.GetAccessToken()}");
         
             using var graphQLClient = new GraphQLHttpClient("https://app.toplogger.nu/graphql", new NewtonsoftJsonSerializer(), httpClient);
             var response = await graphQLClient.SendQueryAsync<T>(request);
