@@ -13,18 +13,11 @@ public interface IAuthenticationService
     void Logout();
 }
 
-public class AuthenticationService : IAuthenticationService
+public class AuthenticationService(IStorageService storageService) : IAuthenticationService
 {
-    private readonly IStorageService _storageService;
-
-    public AuthenticationService(IStorageService storageService)
-    {
-        _storageService = storageService;
-    }
-
     public async Task<string> GetAccessToken()
     {
-        var authTokens = _storageService.Read<AuthTokens>("AuthTokens");
+        var authTokens = storageService.Read<AuthTokens>("AuthTokens");
         if (authTokens == null) throw new AuthenticationFailedException("No auth tokens found");
 
         if (authTokens.Access.ExpiresAt > DateTime.Now.AddMinutes(5))
@@ -73,11 +66,11 @@ public class AuthenticationService : IAuthenticationService
         if (response.Errors != null)
             throw new AuthenticationFailedException($"Authentication failed: {JsonConvert.SerializeObject(response.Errors, Formatting.Indented)}");
 
-        _storageService.Write("AuthTokens", response.Data.Tokens);
+        storageService.Write("AuthTokens", response.Data.Tokens);
         return response.Data.Tokens.Access.Token;
     }
     public void Logout()
     {
-        _storageService.Delete("AuthTokens");
+        storageService.Delete("AuthTokens");
     }
 }

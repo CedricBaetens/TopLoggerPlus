@@ -1,15 +1,14 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using TopLoggerPlus.App.Utils;
 using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
 [QueryProperty(nameof(RouteId), nameof(RouteId))]
-public class RouteDetailsViewModel : INotifyPropertyChanged
+public class RouteDetailsViewModel(IToploggerService toploggerService, IDialogService dialogService) : INotifyPropertyChanged
 {
-    private readonly IToploggerService _toploggerService;
-
     private string _routeId;
     public string RouteId
     {
@@ -46,23 +45,22 @@ public class RouteDetailsViewModel : INotifyPropertyChanged
     public ICommand Appearing => new Command(async () => await OnAppearing());
     public ICommand Back => new Command(async () => await OnBack());
 
-    public RouteDetailsViewModel(IToploggerService toploggerService)
-    {
-        _toploggerService = toploggerService;
-    }
-
     private async Task OnAppearing()
     {
         try
         {
-            Route = _toploggerService.GetRouteById(_routeId);
+            Route = toploggerService.GetRouteById(_routeId);
             CommunityInfo = null;
-            CommunityInfo = await _toploggerService.GetRouteCommunityInfo(_routeId);
+            CommunityInfo = await toploggerService.GetRouteCommunityInfo(_routeId);
         }
         catch (AuthenticationFailedException)
         {
             await Task.Delay(100);
             await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
+        }
+        catch (TopLoggerPlusException ex)
+        {
+            await dialogService.DisplayAlert("Refresh failed", ex.Message);
         }
     }
     private async Task OnBack()

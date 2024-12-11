@@ -6,11 +6,8 @@ using TopLoggerPlus.Contracts.Utils;
 
 namespace TopLoggerPlus.App.ViewModels;
 
-public class AccountViewModel : INotifyPropertyChanged
+public class AccountViewModel(IToploggerService toploggerService, IDialogService dialogService) : INotifyPropertyChanged
 {
-    private IToploggerService _toploggerService;
-    private readonly IDialogService _dialogService;
-
     private User _user;
     public User User
     {
@@ -36,17 +33,11 @@ public class AccountViewModel : INotifyPropertyChanged
     public ICommand Logout => new Command(async () => await OnLogout());
     public ICommand ClearData => new Command(async () => await OnClearData());
 
-    public AccountViewModel(IToploggerService toploggerService, IDialogService dialogService)
-    {
-        _toploggerService = toploggerService;
-        _dialogService = dialogService;
-    }
-
     private async Task OnAppearing()
     {
         try
         {
-            User = await _toploggerService.GetMyUserInfo();
+            User = await toploggerService.GetMyUserInfo();
             SelectedGym = User.FavoriteGyms?.SingleOrDefault(g => g.Id == User.Gym.Id);
         }
         catch (AuthenticationFailedException)
@@ -54,16 +45,20 @@ public class AccountViewModel : INotifyPropertyChanged
             await Task.Delay(100);
             await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
         }
+        catch (TopLoggerPlusException ex)
+        {
+            await dialogService.DisplayAlert("Refresh failed", ex.Message);
+        }
     }
     private async Task OnLogout()
     {
-        _toploggerService.Logout();
+        toploggerService.Logout();
         await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
     }
     private async Task OnClearData()
     {
-        _toploggerService.ClearAll();
-        await _dialogService.DisplayAlert("All info cleared");
+        toploggerService.ClearAll();
+        await dialogService.DisplayAlert("All info cleared");
         await Shell.Current.GoToAsync($"//{nameof(LoginPage)}");
     }
 

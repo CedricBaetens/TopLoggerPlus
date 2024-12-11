@@ -25,10 +25,18 @@ public class StorageService : IStorageService
 
     public T Read<T>(string key)
     {
-        var path = Path.Combine(_directory, $"{key}.txt");
-        return File.Exists(path)
-            ? JsonSerializer.Deserialize<T>(File.ReadAllText(path))
-            : default;
+        try
+        {
+            var path = Path.Combine(_directory, $"{key}.txt");
+            return File.Exists(path)
+                ? JsonSerializer.Deserialize<T>(File.ReadAllText(path))
+                : default;
+        }
+        catch (JsonException)
+        {
+            Delete(key);
+            return default;
+        }
     }
     public void Write<T>(string key, T value)
     {

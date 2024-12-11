@@ -34,7 +34,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<RouteDetailsPage>();
         builder.Services.AddTransient<RouteDetailsViewModel>();
 
-        builder.Services.AddSingleton<IToploggerService, ToploggerService>();
+        builder.Services.AddTransient<IToploggerService, ToploggerService>();
+        builder.Services.AddHttpClient<IToploggerService, ToploggerService>();
         builder.Services.AddTransient<IGraphQLService, GraphQLService>();
         builder.Services.AddTransient<IAuthenticationService, AuthenticationService>();
         builder.Services.AddTransient<IStorageService, StorageService>();

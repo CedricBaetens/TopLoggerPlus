@@ -7,19 +7,12 @@ public interface ITestService
     Task Run();
 }
 
-public class TestService : ITestService
+public class TestService(
+    ILogger<TestService> logger,
+    IAuthenticationService authenticationService,
+    IGraphQLService graphQLService)
+    : ITestService
 {
-    private readonly ILogger<TestService> _logger;
-    private readonly IAuthenticationService _authenticationService;
-    private readonly IGraphQLService _graphQLService;
-
-    public TestService(ILogger<TestService> logger, IAuthenticationService authenticationService, IGraphQLService graphQLService)
-    {
-        _logger = logger;
-        _authenticationService = authenticationService;
-        _graphQLService = graphQLService;
-    }
-
     public async Task Run()
     {
         await GraphQLTest();
@@ -31,18 +24,14 @@ public class TestService : ITestService
         // var accessToken = await _authenticationService.RefreshAccessToken(refreshToken);
         // _logger.LogInformation("AccessToken refreshed: {accessToken}", accessToken);
         
-        var accessToken = await _authenticationService.GetAccessToken();
-        _logger.LogInformation("AccessToken: {accessToken}", accessToken);
+        var accessToken = await authenticationService.GetAccessToken();
+        logger.LogInformation("AccessToken: {accessToken}", accessToken);
         
-        var user = await _graphQLService.GetMyUserInfo();
-        _logger.LogInformation($"Id: {user.Id}, Name: {user.FullName}, GymId: {user.Gym.Id}");
-        
-        // var gyms = await _graphQLService.GetGyms();
-        // foreach (var gym in gyms?.ToList())
-        //     _logger.LogInformation($"Name: {gym.Name}");
+        var user = await graphQLService.GetMyUserInfo();
+        logger.LogInformation($"Id: {user.Id}, Name: {user.FullName}, GymId: {user.Gym.Id}");
 
-        // var routes = await _graphQLService.GetRoutes("b9i9x3bqtdd6um275gbje");
-        // foreach (var route in routes ?? new List<Route>())
-        //     _logger.LogInformation($"Id: {route.Id} Wall: {route.Wall?.NameLoc ?? "unknown"}");
+        var climbs = await graphQLService.GetClimbs(user.Gym.Id, user.Id);
+        foreach (var route in climbs ?? [])
+            logger.LogInformation($"{route.Wall?.NameLoc ?? "unknown"}|{route.HoldColor}");
     }
 }
