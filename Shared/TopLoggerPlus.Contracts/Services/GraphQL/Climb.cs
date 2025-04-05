@@ -4,6 +4,7 @@ public class Climb
 {
     public string Id { get; set; }
     public int Grade { get; set; }
+    public string Label { get; set; }
     
     public Wall Wall { get; set; }
     public HoldColor HoldColor { get; set; }

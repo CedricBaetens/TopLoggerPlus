@@ -114,7 +114,7 @@ public class RouteOverviewViewModel(IToploggerService toploggerService, IDialogS
                     LastSynced = syncTime;
                     Routes = routes?
                         .Where(r => r.Wall.Contains("sector", StringComparison.OrdinalIgnoreCase))
-                        .OrderBy(r => r.GradeNumber).ThenBy(r => r.Wall)
+                        .OrderBy(r => r.GradeNumber).ThenBy(r => r.Wall).ThenBy(r => r.Rope)
                         .ToList();
                 }
                 break;
