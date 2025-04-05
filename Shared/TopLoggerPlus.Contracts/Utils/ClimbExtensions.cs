@@ -22,16 +22,9 @@ public static class ClimbExtensions
 
         return $"{level}{letter}{details}";
     }
-    public static string GetRopeNumber(this Climb climb, List<RopeNumber> ropeNumbers)
+    public static string GetRopeNumber(this Climb climb)
     {
-        if (climb.Grade == 0) return "/";
-        
-        var ropeNumber = ropeNumbers
-            .Where(n => string.Equals(n.Wall, climb.Wall?.NameLoc, StringComparison.CurrentCultureIgnoreCase)
-                                    && string.Equals(n.Color, climb.HoldColor?.NameLoc, StringComparison.CurrentCultureIgnoreCase))
-            .OrderBy(n => Math.Abs(n.Grade - climb.Grade))
-            .FirstOrDefault();
-        return ropeNumber?.Number.ToString() ?? "/";
+        return int.TryParse(climb.Label, out var ropeNumber) ? ropeNumber.ToString() : "/";
     }
     public static RouteColor GetRouteColor(this HoldColor hold)
     {

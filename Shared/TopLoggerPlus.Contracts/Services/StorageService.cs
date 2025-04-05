@@ -4,7 +4,7 @@ namespace TopLoggerPlus.Contracts.Services;
 
 public interface IStorageService
 {
-    T Read<T>(string key);
+    (T data, DateTime lastModified) Read<T>(string key);
     void Write<T>(string key, T value);
     void Delete(string key);
     
@@ -23,14 +23,17 @@ public class StorageService : IStorageService
             ResetStorage();
     }
 
-    public T Read<T>(string key)
+    public (T, DateTime) Read<T>(string key)
     {
         try
         {
             var path = Path.Combine(_directory, $"{key}.txt");
-            return File.Exists(path)
-                ? JsonSerializer.Deserialize<T>(File.ReadAllText(path))
-                : default;
+            if (!File.Exists(path))
+                return (default, DateTime.Now);
+
+            var data = JsonSerializer.Deserialize<T>(File.ReadAllText(path));
+            var lastModified = File.GetLastWriteTimeUtc(path);
+            return (data, lastModified);
         }
         catch (JsonException)
         {

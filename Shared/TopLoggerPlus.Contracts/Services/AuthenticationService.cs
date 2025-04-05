@@ -17,7 +17,7 @@ public class AuthenticationService(IStorageService storageService) : IAuthentica
 {
     public async Task<string> GetAccessToken()
     {
-        var authTokens = storageService.Read<AuthTokens>("AuthTokens");
+        var (authTokens, _) = storageService.Read<AuthTokens>("AuthTokens");
         if (authTokens == null) throw new AuthenticationFailedException("No auth tokens found");
 
         if (authTokens.Access.ExpiresAt > DateTime.Now.AddMinutes(5))
