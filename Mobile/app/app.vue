@@ -8,7 +8,7 @@ import { ascentLabel, averageLabel, dateLabel, dateValue, defaultWallSelection, 
 const { state, gyms, activeRoutes, ranked, initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, logout, clearSaved } = useTopLogger()
 const token = ref(''), showToken = ref(false), showFilters = ref(false), search = ref('')
 const signingIn = ref(false)
-const appVersion = ref('3.0.5')
+const appVersion = ref('3.0.6')
 const grade = ref(''), selectedWalls = ref<string[]>([]), color = ref(''), status = ref(''), attemptedOnly = ref(false)
 const wallsChanged = ref(false)
 const root = ref<HTMLElement | null>(null), detailHeading = ref<HTMLElement | null>(null)
@@ -88,9 +88,9 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
   <div ref="root" class="app-shell" @touchstart.passive="touchStart" @touchmove.passive="touchMove" @touchend.passive="touchEnd">
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="app-header">
-      <a class="brand" href="#" aria-label="TopLogger Plus home" @click.prevent="changeTab('routes')"><span class="brand-mark"><AppIcon name="mountain" /></span><span>toplogger<span class="brand-plus">plus</span></span></a>
+      <a class="brand" href="#" aria-label="TopLogger Plus home" @click.prevent="changeTab('routes')"><span>TopLogger <span class="brand-plus">Plus</span></span></a>
       <label v-if="state.user && gyms.length" class="gym-picker"><span class="sr-only">Selected gym</span><select aria-label="Selected gym" :value="state.gymId" @change="selectGym(($event.target as HTMLSelectElement).value)"><option v-for="gym in gyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option></select></label>
-      <span v-else class="header-note">YOUR CLIMBING COMPANION</span>
+      
     </header>
 
     <main id="main" :class="{ 'login-main': !state.user }">
@@ -129,19 +129,19 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
           <div v-if="state.needsLogin" class="detail-panel"><h2>Reconnect TopLogger</h2><button v-if="Capacitor.isNativePlatform()" class="primary full" :disabled="signingIn || state.busy" @click="signIn">Sign in with TopLogger</button><p class="muted login-alternative">Or paste a fresh refresh token from TopLogger’s browser storage (<code>tl-auth → refresh.token</code>).</p><form @submit.prevent="submitToken"><label for="reconnect-token">Refresh token</label><input id="reconnect-token" v-model="token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required><button class="primary full" :disabled="state.busy || !token.trim()">{{ state.busy ? 'Connecting…' : 'Reconnect' }}</button></form></div>
           <div class="detail-panel"><h2>Appearance</h2><div class="segmented"><button v-for="theme in (['system', 'light', 'dark'] as const)" :key="theme" :aria-pressed="state.theme === theme" @click="state.theme = theme">{{ theme[0]!.toUpperCase() + theme.slice(1) }}</button></div></div>
           <div class="detail-panel"><h2>Saved data</h2><p class="muted">Clear offline data. Keep your login.</p><button class="secondary full" :disabled="state.busy" @click="clearSaved">Clear saved data</button></div>
-          <button class="danger full" @click="logout">Sign out and remove account data</button><p class="account-footer">TOPLOGGER PLUS · {{ appVersion }}</p>
+          <button class="danger full" @click="logout">Sign out and remove account data</button><p class="account-footer">TopLogger Plus {{ appVersion }}</p>
         </section>
 
         <section v-else>
           <div class="page-heading"><div><h1>{{ title }}</h1></div><button class="icon-button" aria-label="Refresh TopLogger data" :disabled="state.busy || state.needsLogin" @click="refresh"><span v-if="state.busy" class="spinner" /><AppIcon v-else name="refresh" /></button></div>
           <template v-if="state.tab === 'top'">
             <div class="segmented period"><button v-for="days in [60, 120, 180]" :key="days" :aria-pressed="state.days === days" @click="state.days = days">{{ days / 30 }} months</button></div>
-            <div class="progress-card"><div><span class="section-kicker">TOP 10 AVERAGE</span><strong>{{ state.historyReady ? averageLabel(ranked) : '—' }}</strong><span>{{ state.historyReady ? `${ranked.length} ${ranked.length === 1 ? 'route' : 'routes'} · past ${state.days} days` : state.busy ? 'Loading ascent history…' : 'Ascent history unavailable' }}</span></div><AppIcon name="top" /></div>
+            <div class="progress-card"><div><span class="section-kicker">Average</span><strong>{{ state.historyReady ? averageLabel(ranked) : '—' }}</strong><span>{{ state.historyReady ? `${ranked.length} ${ranked.length === 1 ? 'route' : 'routes'} · past ${state.days} days` : state.busy ? 'Loading ascent history…' : 'Ascent history unavailable' }}</span></div></div>
             <div v-if="state.historyError" class="notice error" role="alert">{{ state.historyError }}<button :disabled="state.busy || state.needsLogin" @click="refresh">Retry</button></div>
             <div class="section-heading"><h2>Best ascents</h2><span class="muted">{{ ranked.length }} / 10</span></div>
             <RouteCard v-for="(item, index) in ranked" :key="item.route.id" :route="item.route" :rank="index + 1" :ranked="item" @open="showRoute" />
-            <div v-if="!ranked.length" class="empty-state" role="status"><AppIcon name="top" /><h2>{{ state.busy ? 'Loading your ascent history' : state.historyReady ? 'Your next top starts here' : 'Ascent history unavailable' }}</h2><p>{{ state.busy ? 'Including routes that have left the wall.' : state.historyReady ? 'No qualifying ascents in this period. Try a longer window.' : 'Connect and refresh to load verified ascent history.' }}</p></div>
-            <details class="scoring-note"><summary>How is my score calculated?</summary><p>Redpoint: route grade. Flash: grade + 10. Onsight: grade + 15. Your best qualifying ascent per route counts, including removed routes. Ties favor the most recent ascent. The average uses the routes available, up to ten.</p></details>
+            <div v-if="!ranked.length" class="empty-state" role="status"><AppIcon name="top" /><h2>{{ state.busy ? 'Loading history' : state.historyReady ? 'No ascents in this period' : 'Ascent history unavailable' }}</h2><p>{{ state.busy ? 'Including routes that have left the wall.' : state.historyReady ? 'No qualifying ascents in this period. Try a longer window.' : 'Connect and refresh to load verified ascent history.' }}</p></div>
+            <details class="scoring-note"><summary>Scoring</summary><p>Redpoint: route grade. Flash: grade + 10. Onsight: grade + 15. Your best qualifying ascent per route counts, including removed routes. Ties favor the most recent ascent. The average uses the routes available, up to ten.</p></details>
           </template>
           <template v-else>
             <div v-if="state.tab === 'routes'" class="route-tabs" aria-label="Route completion"><button :aria-pressed="!status" @click="status = ''">All <span>{{ activeRoutes.length }}</span></button><button :aria-pressed="status === 'todo'" @click="status = 'todo'">To do <span>{{ activeRoutes.length - topped }}</span></button><button :aria-pressed="status === 'topped'" @click="status = 'topped'"><AppIcon name="check" />Done <span>{{ topped }}</span></button></div>
@@ -150,7 +150,7 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
             <label v-if="state.tab === 'leaving'" class="checkbox-row"><input v-model="attemptedOnly" type="checkbox">Only routes I’ve attempted</label>
             <div class="list-count muted"><span v-if="selectedWalls.length">{{ selectedWalls[0] }}<template v-if="selectedWalls.length > 1"> +{{ selectedWalls.length - 1 }}</template> · </span>{{ filtered.length }} {{ filtered.length === 1 ? 'route' : 'routes' }}</div>
             <RouteCard v-for="route in filtered" :key="route.id" :route="route" :leaving="state.tab === 'leaving'" @open="showRoute" />
-            <div v-if="!filtered.length" class="empty-state" role="status"><AppIcon :name="state.tab === 'leaving' ? 'leaving' : 'routes'" /><h2>{{ state.busy ? 'Finding your routes' : search || filterCount || attemptedOnly ? 'No matching routes' : state.tab === 'leaving' ? 'Nothing leaving just yet' : 'No routes to show' }}</h2><p>{{ state.busy ? 'Fetching the latest from TopLogger.' : search || filterCount || attemptedOnly ? 'Try a broader search or clear your filters.' : !state.gymId ? 'Choose a gym in TopLogger, then reconnect here.' : state.tab === 'leaving' ? 'Routes with a planned removal date will appear here.' : 'Refresh to load the routes at this gym.' }}</p><button v-if="search || filterCount || attemptedOnly" class="secondary" @click="resetFilters">Clear filters</button></div>
+            <div v-if="!filtered.length" class="empty-state" role="status"><AppIcon :name="state.tab === 'leaving' ? 'leaving' : 'routes'" /><h2>{{ state.busy ? 'Loading routes' : search || filterCount || attemptedOnly ? 'No matching routes' : state.tab === 'leaving' ? 'No routes leaving soon' : 'No routes to show' }}</h2><p>{{ state.busy ? 'Fetching the latest from TopLogger.' : search || filterCount || attemptedOnly ? 'Try a broader search or clear your filters.' : !state.gymId ? 'Choose a gym in TopLogger, then reconnect here.' : state.tab === 'leaving' ? 'Routes with a planned removal date will appear here.' : 'Refresh to load the routes at this gym.' }}</p><button v-if="search || filterCount || attemptedOnly" class="secondary" @click="resetFilters">Clear filters</button></div>
           </template>
           <div class="sync-footer" role="status"><span :class="['sync-dot', { busy: state.busy }]" />{{ state.busy ? 'Syncing with TopLogger…' : synced ? `Last synced ${synced}` : 'Not synced yet' }}<span v-if="state.historyError && state.tab === 'top' && state.historyReady"> · Saved history</span></div>
         </section>

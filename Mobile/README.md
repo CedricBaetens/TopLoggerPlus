@@ -1,6 +1,6 @@
 # TopLogger Plus — Android
 
-Nuxt 4 / Vue 3 / TypeScript UI, bundled locally with Capacitor 8. MAUI remains alongside it until live Android acceptance is complete. No hosted backend, write-back operations, or bundled sample account data.
+Nuxt 4 / Vue 3 / TypeScript UI, bundled locally with Capacitor 8. No hosted backend, write-back operations, or bundled sample account data.
 
 ## Build and install
 
@@ -15,13 +15,13 @@ adb shell am start -n com.toploggerplus.app/.MainActivity
 
 Signing JSON contains `keystore` (absolute JKS path), `password`, and `alias`. Alternatively set `TLP_KEYSTORE`, `TLP_STORE_PASSWORD`, `TLP_KEY_ALIAS`, and optional `TLP_KEY_PASSWORD`. Never commit signing files. The build script rejects unsigned release builds.
 
-Output: `android/app/build/outputs/apk/release/app-release.apk`. Android 7+ (API 24), application ID `com.toploggerplus.app`; installs separately from MAUI. Debug builds use `com.toploggerplus.app.qa` so native tests cannot touch release credentials.
+Output: `android/app/build/outputs/apk/release/app-release.apk`. Android 7+ (API 24), application ID `com.toploggerplus.app`. Debug builds use `com.toploggerplus.app.qa` so native tests cannot touch release credentials.
 
 On this workstation, tools are under `C:/Users/CedricBaetens/.codex/android-tools`; the new personal signing key and JSON are under `C:/Users/CedricBaetens/.codex/toplogger-plus-signing`. No existing keystore was available in the checkout. **Back up the signing directory privately**: future updates need the same key.
 
 ## Connect TopLogger
 
-Tap **Sign in with TopLogger** on Android. The app opens TopLogger's official HTTPS page; enter your credentials and complete its verification there. Plus reads the resulting refresh token, removes the web session and saves the token in its encrypted Android vault. Live account verification remains pending.
+Tap **Sign in with TopLogger** on Android. The app opens TopLogger's official HTTPS page; enter your credentials and complete its verification there. Plus reads the resulting refresh token, removes the web session and saves the token in its encrypted Android vault. Live sign-in and session restoration have been verified on Android.
 
 Fallback: sign in at https://app.toplogger.nu on a desktop browser. Developer Tools → Application → Local Storage → app.toplogger.nu → `tl-auth`: copy **only `refresh.token`**, then paste it into Plus. External browser sessions are not transferred automatically. Embedded sign-in allows the official origin only; use email sign-in or the token fallback if a social provider requires an external page. Never post credentials in chat or commit them.
 
@@ -87,3 +87,7 @@ Routes use compact rows with explicit Done checks and To do/Attempted indicators
 ### 3.0.5 wall selection
 
 Select multiple wall checkboxes under Filters. Klimax initially selects Sector 1 through Sector 7, matching case-insensitively and preserving API names such as sector 2; other gyms initially show all walls. All walls and Reset filters remove the wall restriction. Explicit choices survive refresh; changing gyms restores that gym’s default. Unit and browser checks cover the default rule and multiple-wall filtering. Signed update installed on the phone; live visual review awaits unlocking.
+
+### 3.0.6 visual refinement
+
+Flat route rows, restrained typography, neutral surfaces, underlined tabs and simpler detail/account sections replace decorative panels. Completion markers and multiple-wall selection remain available. Type checking and browser checks passed, including dark mode, 150% text, filters and error states.
