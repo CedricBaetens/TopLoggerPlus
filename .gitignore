@@ -13,3 +13,16 @@ TestResult.xml
 
 .terraform
 *.tfvars
+
+# Nuxt / Capacitor replacement
+Mobile/node_modules/
+Mobile/.nuxt/
+Mobile/.output/
+Mobile/artifacts/
+Mobile/android/.gradle/
+Mobile/android/**/build/
+Mobile/android/local.properties
+Mobile/android/app/src/main/assets/public/
+Mobile/android/app/src/main/assets/capacitor.config.json
+Mobile/android/app/src/main/assets/capacitor.plugins.json
+*.jks
