@@ -2,7 +2,7 @@
   "name": "toplogger-plus",
   "private": true,
   "type": "module",
-  "version": "3.0.6",
+  "version": "3.0.0",
   "scripts": {
     "dev": "nuxt dev --host 127.0.0.1",
     "generate": "nuxt generate",

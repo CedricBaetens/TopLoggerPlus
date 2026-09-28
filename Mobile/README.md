@@ -52,7 +52,6 @@ The API check validates live GraphQL shapes without credentials; it does **not**
 | Account and favorite gyms | Local selection and scoped caches; TopLogger preference unchanged | Browser switch/isolation checks |
 | Routes and details | Grade, personal grade, color/name, wall, rope/label, setters, attempts, dates, status, score | Browser checks; schema accepted |
 | Refresh / offline | Button and pull gesture, last successful sync, cache preserved on failure | Browser failure checks; gesture/device pending |
-| Leaving Soon | Active routes, planned dates, earliest first; attempted-only filter | Unit lifecycle + browser checks |
 | Top 10 | 60/120/180 days; gym/session-scoped history; best valid ticked top per route; bonuses; latest-date ties; archived recovery | Unit + browser checks; Live S26: 60/120/180-day periods each load 10 routes; confirmed after restart in 3.0.2. Fixed API page limit (100). Detailed historical parity comparison pending |
 | Community | Grade/rating distributions, toppers, explicit unavailable states | Browser checks; schema accepted; account permissions pending |
 | Accessibility / themes | Light/dark/system, semantic controls, safe areas, 48px controls, large text | Browser at 320/390/768px and 150% text; TalkBack/device pending |
@@ -91,3 +90,27 @@ Select multiple wall checkboxes under Filters. Klimax initially selects Sector 1
 ### 3.0.6 visual refinement
 
 Flat route rows, restrained typography, neutral surfaces, underlined tabs and simpler detail/account sections replace decorative panels. Completion markers and multiple-wall selection remain available. Type checking and browser checks passed, including dark mode, 150% text, filters and error states.
+
+### 3.0.7 reference styling
+
+Applied the supplied game-companion visual style to existing screens: near-black blue panels, purple controls/navigation, mint completion markers and gold Top 10 highlights. Light/dark/system themes remain available. No gamification features were added. Browser checks passed for navigation, filters, history, offline errors and 150% text.
+
+### 3.0.8 completion visibility
+
+Completed routes use a green-tinted row, a strong left edge and a filled check marker. Unfinished routes keep neutral panels and empty circles, with To do/Attempted labels. Browser UI checks passed in both themes and at 150% text.
+
+### 3.0.9 stronger completion contrast
+
+Completed rows have a stronger green background, outlined edge and filled DONE badge. Neutral TO DO and amber ATTEMPTED badges make incomplete routes explicit. Browser checks passed, including 150% text and both themes.
+
+### 3.0.10 completed-route palette
+
+Changed the completed-route palette to restrained teal, with white text/checkmarks on the DONE badge. Full-row tint and strong outline remain. Browser checks passed in light/dark mode and with large text.
+
+### 3.0.11 ascent icons
+
+Route rows use icons without visible status words: a single check for redpoint, double check for onsight, lightning for flash, and an empty circle for unfinished routes (amber when attempted). Accessible status labels remain. UI checks cover hidden status text and accessible ascent labels.
+
+### Current 3.0.0 navigation
+
+Leaving Soon has been removed at user request. Main destinations are Routes, Top 10 and Account. Removal dates remain in route details. Version remains 3.0.0.

@@ -8,7 +8,7 @@ const state = reactive({
   user: null as User | null, gymId: '', routes: [] as Route[], liveRouteIds: [] as string[], history: [] as Ascent[],
   historyReady: false, historyError: '', syncedAt: '', historyAt: '', busy: false,
   initialized: false, connected: false, needsLogin: false, error: '', cacheWarning: '',
-  tab: 'routes' as 'routes' | 'leaving' | 'top' | 'account', days: 60,
+  tab: 'routes' as 'routes' | 'top' | 'account', days: 60,
   selected: null as Route | null, community: null as Community | null,
   communityBusy: false, communityError: '', theme: 'system' as 'system' | 'light' | 'dark',
 })

@@ -3,25 +3,24 @@ import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { loginToken } from './utils/login'
-import { ascentLabel, averageLabel, dateLabel, dateValue, defaultWallSelection, frenchGrade, score } from './utils/domain'
+import { ascentLabel, averageLabel, dateLabel, defaultWallSelection, frenchGrade, score } from './utils/domain'
 
 const { state, gyms, activeRoutes, ranked, initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, logout, clearSaved } = useTopLogger()
 const token = ref(''), showToken = ref(false), showFilters = ref(false), search = ref('')
 const signingIn = ref(false)
-const appVersion = ref('3.0.6')
-const grade = ref(''), selectedWalls = ref<string[]>([]), color = ref(''), status = ref(''), attemptedOnly = ref(false)
+const appVersion = ref('3.0.0')
+const grade = ref(''), selectedWalls = ref<string[]>([]), color = ref(''), status = ref('')
 const wallsChanged = ref(false)
 const root = ref<HTMLElement | null>(null), detailHeading = ref<HTMLElement | null>(null)
-const tabs = [{ id: 'routes', title: 'Routes' }, { id: 'leaving', title: 'Leaving Soon' }, { id: 'top', title: 'Top 10' }, { id: 'account', title: 'Account' }] as const
+const tabs = [{ id: 'routes', title: 'Routes' }, { id: 'top', title: 'Top 10' }, { id: 'account', title: 'Account' }] as const
 const title = computed(() => tabs.find(tab => tab.id === state.tab)?.title || 'Routes')
-const source = computed(() => state.tab === 'leaving' ? activeRoutes.value.filter(route => !!route.outPlannedAt && Number.isFinite(dateValue(route.outPlannedAt))).sort((a, b) => dateValue(a.outPlannedAt!) - dateValue(b.outPlannedAt!)) : [...activeRoutes.value].sort((a, b) => a.grade - b.grade || (a.wall?.nameLoc || '').localeCompare(b.wall?.nameLoc || '') || (a.label || '').localeCompare(b.label || '', undefined, { numeric: true })))
+const source = computed(() => [...activeRoutes.value].sort((a, b) => a.grade - b.grade || (a.wall?.nameLoc || '').localeCompare(b.wall?.nameLoc || '') || (a.label || '').localeCompare(b.label || '', undefined, { numeric: true })))
 const filtered = computed(() => source.value.filter(route => {
   const query = search.value.trim().toLowerCase()
   return (!query || [route.name, route.label, route.wall?.nameLoc, route.holdColor?.nameLoc, route.setterName, frenchGrade(route.grade)].some(value => value?.toLowerCase().includes(query)))
     && (!grade.value || String(route.grade) === grade.value) && (!selectedWalls.value.length || selectedWalls.value.includes(route.wall?.nameLoc || ''))
     && (!color.value || route.holdColor?.nameLoc === color.value)
     && (!status.value || (status.value === 'topped' ? (route.climbUser?.tickType || 0) > 0 : status.value === 'todo' ? !route.climbUser?.tickType : status.value === 'attempted' ? (route.climbUser?.totalTries || 0) > 0 && !route.climbUser?.tickType : !route.climbUser?.totalTries && !route.climbUser?.tickType))
-    && (!attemptedOnly.value || state.tab !== 'leaving' || (route.climbUser?.totalTries || 0) > 0)
 }))
 const grades = computed(() => [...new Set(activeRoutes.value.map(route => route.grade))].sort((a, b) => a - b))
 const walls = computed(() => [...new Set(activeRoutes.value.flatMap(route => route.wall?.nameLoc ? [route.wall.nameLoc] : []))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })))
@@ -56,7 +55,7 @@ async function officialLogin() {
   if (Capacitor.isNativePlatform()) await Browser.open({ url: 'https://app.toplogger.nu/en/sign-in' })
   else window.open('https://app.toplogger.nu/en/sign-in', '_blank', 'noopener,noreferrer')
 }
-function resetFilters() { grade.value = ''; allWalls(); color.value = ''; status.value = ''; search.value = ''; attemptedOnly.value = false }
+function resetFilters() { grade.value = ''; allWalls(); color.value = ''; status.value = ''; search.value = '' }
 async function changeTab(tab: typeof state.tab) { closeRoute(); await selectTab(tab); window.scrollTo({ top: 0 }) }
 function showRoute(route: Parameters<typeof openRoute>[0]) {
   history.pushState({ route: route.id }, '')
@@ -147,10 +146,9 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
             <div v-if="state.tab === 'routes'" class="route-tabs" aria-label="Route completion"><button :aria-pressed="!status" @click="status = ''">All <span>{{ activeRoutes.length }}</span></button><button :aria-pressed="status === 'todo'" @click="status = 'todo'">To do <span>{{ activeRoutes.length - topped }}</span></button><button :aria-pressed="status === 'topped'" @click="status = 'topped'"><AppIcon name="check" />Done <span>{{ topped }}</span></button></div>
             <div class="search-row"><label class="search"><AppIcon name="search" /><input v-model="search" type="search" placeholder="Search" aria-label="Search routes"></label><button class="filter-button" aria-label="Filters" :aria-expanded="showFilters" aria-controls="filters" @click="showFilters = !showFilters"><AppIcon name="filter" /><span>Filters<template v-if="filterCount"> · {{ filterCount }}</template></span></button></div>
             <div v-if="showFilters" id="filters" class="filters"><label>Grade<select v-model="grade" aria-label="Grade"><option value="">All grades</option><option v-for="value in grades" :key="value" :value="String(value)">{{ frenchGrade(value) }}</option></select></label><fieldset class="wall-filter"><legend>Walls</legend><button class="text-button" :aria-pressed="!selectedWalls.length" @click="allWalls">All walls</button><div class="wall-options"><label v-for="value in walls" :key="value"><input v-model="selectedWalls" type="checkbox" :value="value" @change="wallsChanged = true"><span>{{ value }}</span></label></div></fieldset><label>Hold color<select v-model="color" aria-label="Hold color"><option value="">All colors</option><option v-for="value in colors" :key="value!" :value="value">{{ value }}</option></select></label><label>Ascent status<select v-model="status" aria-label="Ascent status"><option value="">Any status</option><option value="untried">To try</option><option value="attempted">Attempted</option><option value="todo">Not done</option><option value="topped">Done</option></select></label><button class="text-button" @click="resetFilters">Reset filters</button></div>
-            <label v-if="state.tab === 'leaving'" class="checkbox-row"><input v-model="attemptedOnly" type="checkbox">Only routes I’ve attempted</label>
             <div class="list-count muted"><span v-if="selectedWalls.length">{{ selectedWalls[0] }}<template v-if="selectedWalls.length > 1"> +{{ selectedWalls.length - 1 }}</template> · </span>{{ filtered.length }} {{ filtered.length === 1 ? 'route' : 'routes' }}</div>
-            <RouteCard v-for="route in filtered" :key="route.id" :route="route" :leaving="state.tab === 'leaving'" @open="showRoute" />
-            <div v-if="!filtered.length" class="empty-state" role="status"><AppIcon :name="state.tab === 'leaving' ? 'leaving' : 'routes'" /><h2>{{ state.busy ? 'Loading routes' : search || filterCount || attemptedOnly ? 'No matching routes' : state.tab === 'leaving' ? 'No routes leaving soon' : 'No routes to show' }}</h2><p>{{ state.busy ? 'Fetching the latest from TopLogger.' : search || filterCount || attemptedOnly ? 'Try a broader search or clear your filters.' : !state.gymId ? 'Choose a gym in TopLogger, then reconnect here.' : state.tab === 'leaving' ? 'Routes with a planned removal date will appear here.' : 'Refresh to load the routes at this gym.' }}</p><button v-if="search || filterCount || attemptedOnly" class="secondary" @click="resetFilters">Clear filters</button></div>
+            <RouteCard v-for="route in filtered" :key="route.id" :route="route" @open="showRoute" />
+            <div v-if="!filtered.length" class="empty-state" role="status"><AppIcon name="routes" /><h2>{{ state.busy ? 'Loading routes' : search || filterCount ? 'No matching routes' : 'No routes to show' }}</h2><p>{{ state.busy ? 'Fetching the latest from TopLogger.' : search || filterCount ? 'Try a broader search or clear your filters.' : !state.gymId ? 'Choose a gym in TopLogger, then reconnect here.' : 'Refresh to load the routes at this gym.' }}</p><button v-if="search || filterCount" class="secondary" @click="resetFilters">Clear filters</button></div>
           </template>
           <div class="sync-footer" role="status"><span :class="['sync-dot', { busy: state.busy }]" />{{ state.busy ? 'Syncing with TopLogger…' : synced ? `Last synced ${synced}` : 'Not synced yet' }}<span v-if="state.historyError && state.tab === 'top' && state.historyReady"> · Saved history</span></div>
         </section>
