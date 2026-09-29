@@ -2,6 +2,7 @@
 const props = defineProps<{ name: string }>()
 const paths: Record<string, string> = {
   routes: 'M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z',
+  adventure: 'm3 20 7-15 5 9 3-5 4 11 M7 20l5-10 5 10',
   top: 'M4 20h16 M6 16V11 M12 16V4 M18 16V8',
   account: 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M5 21v-3a7 7 0 0 1 14 0v3',
   search: 'M10.5 3a7.5 7.5 0 1 0 0 15 7.5 7.5 0 0 0 0-15 M16 16l5 5',

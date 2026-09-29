@@ -4,14 +4,14 @@ import { App } from '@capacitor/app'
 import { loginToken } from './utils/login'
 import { ascentLabel, averageLabel, dateLabel, defaultWallSelection, frenchGrade, gradeChoices, isActive, score } from './utils/domain'
 
-const { state, gyms, activeRoutes, ranked, initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, submitAscent, submitGrade, logout, clearSaved } = useTopLogger()
+const { adventureProgress, resetAdventure, state, gyms, activeRoutes, ranked, initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, submitAscent, submitGrade, logout, clearSaved } = useTopLogger()
 const showFilters = ref(false), search = ref('')
 const signingIn = ref(false)
 const appVersion = ref('3.0.0')
 const grade = ref(''), selectedWalls = ref<string[]>([]), color = ref(''), status = ref('')
 const wallsChanged = ref(false)
 const root = ref<HTMLElement | null>(null), detailHeading = ref<HTMLElement | null>(null)
-const tabs = [{ id: 'routes', title: 'Routes' }, { id: 'top', title: 'Top 10' }, { id: 'account', title: 'Account' }] as const
+const tabs = [{ id: 'routes', title: 'Routes' }, { id: 'top', title: 'Top 10' }, { id: 'adventure', title: 'Adventure' }, { id: 'account', title: 'Account' }] as const
 const title = computed(() => tabs.find(tab => tab.id === state.tab)?.title || 'Routes')
 const source = computed(() => [...activeRoutes.value].sort((a, b) => a.grade - b.grade || (a.wall?.nameLoc || '').localeCompare(b.wall?.nameLoc || '') || (a.label || '').localeCompare(b.label || '', undefined, { numeric: true })))
 const filtered = computed(() => source.value.filter(route => {
@@ -93,6 +93,8 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
     </header>
 
     <main id="main" :class="{ 'login-main': !state.user }">
+      <div v-if="state.user" role="status" aria-live="polite" aria-atomic="true"><p v-if="state.adventureMessage" class="notice">{{ state.adventureMessage }}</p></div>
+      <p v-if="state.user && state.adventureWarning" class="notice error" role="alert">{{ state.adventureWarning }}</p>
       <div v-if="!state.initialized" class="empty-state" role="status"><span class="spinner" /><h1>Getting things ready</h1><p>Opening your saved connection.</p></div>
       <section v-else-if="!state.user" class="onboarding">
         <h1>Connect TopLogger</h1>
@@ -149,13 +151,20 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
             <h3>Rating <span class="muted">{{ communityRating }}</span></h3><div class="rating-row" v-for="vote in state.community.ratingVoteStats" :key="vote.stars"><span>{{ vote.stars }} stars</span><meter :value="vote.count" :max="Math.max(...state.community.ratingVoteStats.map(item => item.count), 1)" :aria-label="`${vote.count} votes for ${vote.stars} stars`" /><span>{{ vote.count }}</span></div><h3>Toppers</h3><p v-if="state.community.toppersUnavailable" class="muted">TopLogger has not made the toppers list available.</p><p v-else-if="!state.community.toppers.length" class="muted">No public tops yet.</p><ul v-else class="toppers"><li v-for="topper in state.community.toppers" :key="topper.id"><AppIcon name="check" /><span>{{ topper.user?.fullName || 'Anonymous climber' }}</span><span class="muted">{{ ascentLabel(topper.tickType) }}<template v-if="topper.grade"> · {{ frenchGrade(topper.grade) }}</template></span></li></ul></template></div>
         </section>
 
+        <section v-else-if="state.tab === 'adventure'">
+          <div class="page-heading"><h1>Adventure</h1></div>
+          <div class="detail-panel adventure-level"><span class="section-kicker">Your climbing adventure</span><h2>Level {{ adventureProgress.level }}</h2><p>{{ adventureProgress.xp }} total XP · {{ adventureProgress.sends }} rewarded sends</p><progress :value="adventureProgress.currentXp" :max="500" aria-label="XP toward next level" /><p class="muted">{{ adventureProgress.currentXp }} / 500 XP toward level {{ adventureProgress.level + 1 }}</p></div>
+          <div class="detail-panel"><h2>Achievements</h2><p class="muted">Every milestone leads to another. Keep climbing to unlock higher targets.</p><ul class="achievement-list"><li v-for="item in adventureProgress.achievements" :key="item.id"><AppIcon :name="item.unlocked ? 'check' : 'mountain'" /><div><strong>{{ item.name }}</strong><p class="muted">{{ item.description }}</p><template v-if="!item.unlocked"><progress :value="item.current" :max="item.target" :aria-label="`${item.name} progress`" /><p class="muted">{{ item.current.toLocaleString() }} / {{ item.target.toLocaleString() }}</p></template></div><span class="badge" :class="{ topped: item.unlocked }">{{ item.unlocked ? 'Unlocked' : 'Locked' }}</span></li></ul></div>
+          <div class="detail-panel"><h2>How XP works</h2><p class="muted">New sends logged here earn 100 XP for Redpoint, 125 for Flash, or 150 for Onsight. Each route counts once. Unsend removes its reward. Attempts and grade votes earn no XP.</p><p class="muted">Progress belongs to this account across all gyms, on this device only. Clearing offline data and signing out keep your adventure.</p><button class="danger full" :disabled="state.ascentBusy" @click="resetAdventure">Reset adventure progress</button></div>
+        </section>
+
         <section v-else-if="state.tab === 'account'">
           <div class="page-heading"><div><h1>Account</h1></div></div>
           <div class="profile-card"><span class="avatar">{{ state.user.fullName?.slice(0, 1) || '?' }}</span><div><h2>{{ state.user.fullName }}</h2><p>{{ gyms.find(gym => gym.id === state.gymId)?.name || 'No gym selected' }}</p></div><span class="badge" :class="{ topped: !state.needsLogin }">{{ state.needsLogin ? 'Reconnect' : 'Connected' }}</span></div>
           <div v-if="state.needsLogin" class="detail-panel"><h2>Reconnect TopLogger</h2><button v-if="Capacitor.isNativePlatform()" class="primary full" :disabled="signingIn || state.busy" @click="signIn">{{ signingIn ? 'Waiting for TopLogger…' : 'Sign in with TopLogger' }}</button><p v-else class="muted">Sign in using the Android app.</p></div>
           <div class="detail-panel"><h2>Appearance</h2><div class="segmented"><button v-for="theme in (['system', 'light', 'dark'] as const)" :key="theme" :aria-pressed="state.theme === theme" @click="state.theme = theme">{{ theme[0]!.toUpperCase() + theme.slice(1) }}</button></div></div>
-          <div class="detail-panel"><h2>Saved data</h2><p class="muted">Clear offline data. Keep your login.</p><button class="secondary full" :disabled="state.busy || state.ascentBusy" @click="clearSaved">Clear saved data</button></div>
-          <button class="danger full" :disabled="state.ascentBusy" @click="logout">Sign out and remove account data</button><p class="account-footer">TopLogger Plus {{ appVersion }}</p>
+          <div class="detail-panel"><h2>Saved data</h2><p class="muted">Clear offline data. Keep your login and adventure progress.</p><button class="secondary full" :disabled="state.busy || state.ascentBusy" @click="clearSaved">Clear saved data</button></div>
+          <button class="danger full" :disabled="state.ascentBusy" @click="logout">Sign out and clear offline data</button><p class="muted">Adventure progress stays on this device after signing out.</p><p class="account-footer">TopLogger Plus {{ appVersion }}</p>
         </section>
 
         <section v-else>

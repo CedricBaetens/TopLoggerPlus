@@ -1,3 +1,4 @@
+import { emptyAdventure, loadAdventure, saveAdventure, updateReward, progress, newlyUnlocked } from '../utils/adventure'
 import { computed, reactive } from 'vue'
 import { ApiError, TopLoggerClient, type HistorySnapshot } from '../utils/toplogger'
 import { cacheKey, clearCache, readCache, writeCache } from '../utils/cache'
@@ -9,7 +10,8 @@ const state = reactive({
   user: null as User | null, gymId: '', routes: [] as Route[], liveRouteIds: [] as string[], history: [] as Ascent[],
   historyReady: false, historyError: '', syncedAt: '', historyAt: '', busy: false,
   initialized: false, connected: false, needsLogin: false, error: '', cacheWarning: '',
-  tab: 'routes' as 'routes' | 'top' | 'account', days: 60,
+  tab: 'routes' as 'routes' | 'top' | 'adventure' | 'account',
+  adventure: emptyAdventure(), adventureMessage: '', adventureWarning: '', days: 60,
   selected: null as Route | null, community: null as Community | null,
   communityBusy: false, communityError: '', theme: 'system' as 'system' | 'light' | 'dark',
   ascentBusy: false, ascentError: '', ascentAction: '',
@@ -83,6 +85,7 @@ async function initialize(): Promise<void> {
   state.user = readCache<User>(PROFILE)?.data ?? null
   if (state.user?.id) {
     state.gymId = readCache<string>(cacheKey(state.user.id, '_', 'gym'))?.data || state.user.gym?.id || state.user.gymUserFavorites?.[0]?.gym.id || ''
+    state.adventure = loadAdventure(state.user.id)
     cachedGym()
   }
   try {
@@ -90,7 +93,7 @@ async function initialize(): Promise<void> {
     if (state.connected) {
       const user = await client.user()
       if (state.user && state.user.id !== user.id) { clearCache(); state.routes = []; state.history = [] }
-      state.user = user; save(PROFILE, user)
+      state.user = user; state.adventure = loadAdventure(user.id); save(PROFILE, user)
       if (!gyms.value.some(gym => gym.id === state.gymId)) state.gymId = user.gym?.id || gyms.value[0]?.id || ''
       cachedGym(); await refresh()
     } else state.needsLogin = true
@@ -104,7 +107,7 @@ async function connect(token: string): Promise<void> {
     await client.connect(token)
     const user = await client.user()
     if (state.user && state.user.id !== user.id) clearCache()
-    state.user = user; state.connected = true; state.needsLogin = false
+    state.user = user; state.adventure = loadAdventure(user.id); state.adventureMessage = ''; state.adventureWarning = ''; state.connected = true; state.needsLogin = false
     save(PROFILE, user)
     state.gymId = readCache<string>(cacheKey(user.id, '_', 'gym'))?.data || user.gym?.id || user.gymUserFavorites[0]?.gym.id || ''
     cachedGym(); state.tab = 'routes'
@@ -141,9 +144,20 @@ async function openRoute(route: Route): Promise<void> {
 async function submitAscent(tickType: number): Promise<void> {
   if (!state.selected || !state.user || !state.connected || state.needsLogin || state.busy || state.ascentBusy) return
   const route = state.selected, userId = state.user.id, gymId = state.gymId, detail = detailsId
-  state.ascentBusy = true; state.ascentError = ''; state.ascentAction = `${route.id}:ascent:${tickType}`
+  state.ascentBusy = true; state.ascentError = ''; state.adventureMessage = ''; state.ascentAction = `${route.id}:ascent:${tickType}`
   try {
     const climbUser = tickType === -1 ? await client.unsend(gymId, userId, route.id) : await client.logAscent(gymId, userId, route, tickType)
+    if (tickType === -1 || (tickType > 0 && !route.climbUser?.tickType && climbUser?.tickType === tickType)) {
+      const before = progress(state.adventure)
+      const next = updateReward(state.adventure, gymId, route.id, tickType)
+      const after = progress(next)
+      state.adventure = next
+      state.adventureWarning = saveAdventure(userId, next) ? '' : 'Adventure progress could not be saved on this device. It may be lost when you close the app.'
+      if (after.xp > before.xp) {
+        const unlocked = newlyUnlocked(before.achievements, after.achievements).map(item => item.name)
+        state.adventureMessage = `+${after.xp - before.xp} XP!${after.level > before.level ? ` Level ${after.level}!` : ''}${unlocked.length ? ` Achievement unlocked: ${unlocked.join(', ')}.` : ''}`
+      }
+    }
     const updated = { ...route, climbUser }
     state.routes = state.routes.map(item => item.id === route.id ? updated : item)
     save(cacheKey(userId, gymId, 'routes'), { routes: state.routes, liveIds: state.liveRouteIds })
@@ -190,7 +204,7 @@ async function logout(): Promise<void> {
   requestId++; detailsId++; state.busy = false
   try { await client.disconnect() }
   catch { state.error = 'Could not clear your secure connection. Please retry signing out.'; return }
-  clearCache(); state.user = null; state.routes = []; state.history = []; state.selected = null; state.community = null
+  clearCache(); state.adventure = emptyAdventure(); state.adventureMessage = ''; state.adventureWarning = ''; state.user = null; state.routes = []; state.history = []; state.selected = null; state.community = null
   state.gymId = ''; state.liveRouteIds = []; state.syncedAt = ''; state.historyAt = ''; state.historyReady = false
   state.connected = false; state.needsLogin = true; state.error = ''; state.tab = 'routes'
 }
@@ -199,9 +213,15 @@ function clearSaved(): void {
   clearCache(state.user.id); save(PROFILE, state.user)
   state.routes = []; state.liveRouteIds = []; state.history = []; state.historyReady = false; state.syncedAt = ''; state.historyAt = ''; state.community = null
 }
+function resetAdventure(): void {
+  if (!state.user || state.ascentBusy || !window.confirm('Reset all adventure XP and achievements for this account on this device?')) return
+  const empty = emptyAdventure()
+  if (!saveAdventure(state.user.id, empty)) { state.adventureWarning = 'Could not reset adventure progress. Please retry.'; return }
+  state.adventure = empty; state.adventureWarning = ''; state.adventureMessage = 'Adventure progress reset. Level 1 awaits!'
+}
 const gyms = computed(() => [...new Map([...(state.user?.gym ? [state.user.gym] : []), ...(state.user?.gymUserFavorites ?? []).map(item => item.gym)].map(gym => [gym.id, gym])).values()])
 export function useTopLogger() {
-  return { state, gyms, activeRoutes: computed(() => { const live = new Set(state.liveRouteIds); return state.routes.filter(route => live.has(route.id) && isActive(route)) }),
+  return { state, gyms, adventureProgress: computed(() => progress(state.adventure)), resetAdventure, activeRoutes: computed(() => { const live = new Set(state.liveRouteIds); return state.routes.filter(route => live.has(route.id) && isActive(route)) }),
     ranked: computed(() => state.historyReady ? topTen(state.routes, state.history, state.gymId, state.days) : []),
     initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, submitAscent, submitGrade, logout, clearSaved }
 }

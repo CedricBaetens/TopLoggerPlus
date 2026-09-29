@@ -8,16 +8,16 @@ Requirements: Node 22+, JDK 21, Android SDK platform 36, Build Tools 35.0.0/36.0
 
 ```powershell
 cd Mobile
-./scripts/build-android.ps1 -SigningFile 'C:/path/outside/repository/signing.json'
+./scripts/build-android.ps1
 adb install -r android/app/build/outputs/apk/release/app-release.apk
 adb shell am start -n com.toploggerplus.app/.MainActivity
 ```
 
-Signing JSON contains `keystore` (absolute JKS path), `password`, and `alias`. Alternatively set `TLP_KEYSTORE`, `TLP_STORE_PASSWORD`, `TLP_KEY_ALIAS`, and optional `TLP_KEY_PASSWORD`. Never commit signing files. The build script rejects unsigned release builds.
+Personal release signing files are included in `Mobile/signing/` and used automatically. Keep this repository private: the key and password allow signing app updates. Signing JSON contains `keystore` (absolute or relative to the JSON file), `password`, and `alias`. Override with `-SigningFile`, or set `TLP_KEYSTORE`, `TLP_STORE_PASSWORD`, `TLP_KEY_ALIAS`, and optional `TLP_KEY_PASSWORD`. The build script rejects unsigned release builds.
 
 Output: `android/app/build/outputs/apk/release/app-release.apk`. Android 7+ (API 24), application ID `com.toploggerplus.app`. Debug builds use `com.toploggerplus.app.qa` so native tests cannot touch release credentials.
 
-On this workstation, tools are under `C:/Users/CedricBaetens/.codex/android-tools`; the new personal signing key and JSON are under `C:/Users/CedricBaetens/.codex/toplogger-plus-signing`. No existing keystore was available in the checkout. **Back up the signing directory privately**: future updates need the same key.
+On this workstation, tools are under `C:/Users/Cedric/.codex/android-tools`; the personal signing key and JSON are included in `Mobile/signing/`, with an additional copy under `C:/Users/Cedric/.codex/toplogger-plus-signing`. No existing keystore was available in the checkout. **Back up the signing directory privately**: future updates need the same key.
 
 ## Connect TopLogger
 
@@ -122,3 +122,11 @@ Route rows use icons without visible status words: a single check for redpoint, 
 ### Current 3.0.0 navigation
 
 Leaving Soon has been removed at user request. Main destinations are Routes, Top 10 and Account. Removal dates remain in route details. Version remains 3.0.0.
+
+### Local Adventure
+
+Adventure rewards new sends confirmed through Plus: Redpoint 100 XP, Flash 125 XP, Onsight 150 XP. Every 500 XP gains a level. Achievement chains for sends, redpoints, flashes, onsights, total XP and gyms derive from current rewards. Count milestones start at 1, 5, 10, 25, 50, then double without a fixed final tier; XP milestones start at 500 and double. Completed badges and progress toward the next target remain visible. Unsend removes the route reward. Attempts, grade votes and imported history earn no XP.
+
+Progress is stored per account across gyms on this device. Offline cache clears and sign-outs preserve it; Adventure offers a confirmed reset. No server sync or backup is provided.
+
+A new release signing key was generated on this workstation on 2026-09-29. The build script uses the included signing files by default, with `JAVA_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/jdk-21.0.12.1+1`, and `ANDROID_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/sdk`. This key cannot update installations signed with the previous key. Keep a private backup of the signing directory.
