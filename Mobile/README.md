@@ -1,6 +1,6 @@
 # TopLogger Plus — Android
 
-Nuxt 4 / Vue 3 / TypeScript UI, bundled locally with Capacitor 8. No hosted backend or bundled sample account data. Ascents are saved directly to TopLogger when requested.
+Nuxt 4 / Vue 3 / TypeScript / Tailwind CSS UI, bundled locally with Capacitor 8. No hosted backend or bundled sample account data. Ascents are saved directly to TopLogger when requested.
 
 ## Build and install
 
@@ -130,3 +130,7 @@ Adventure rewards new sends confirmed through Plus: Redpoint 100 XP, Flash 125 X
 Progress is stored per account across gyms on this device. Offline cache clears and sign-outs preserve it; Adventure offers a confirmed reset. No server sync or backup is provided.
 
 A new release signing key was generated on this workstation on 2026-09-29. The build script uses the included signing files by default, with `JAVA_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/jdk-21.0.12.1+1`, and `ANDROID_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/sdk`. This key cannot update installations signed with the previous key. Keep a private backup of the signing directory.
+
+### Tailwind styling
+
+Tailwind CSS is integrated with the official Vite plugin. Vue templates use utility classes for layouts, component states and responsive styling. `app/assets/main.css` contains theme colour tokens and shared element defaults; existing marker classes remain for browser QA selectors. Light, dark and system themes and device safe areas remain supported.
