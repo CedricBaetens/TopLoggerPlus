@@ -1,7 +1,8 @@
 import { computed, reactive } from 'vue'
-import { ApiError, TopLoggerClient } from '../utils/toplogger'
+import { ApiError, TopLoggerClient, type HistorySnapshot } from '../utils/toplogger'
 import { cacheKey, clearCache, readCache, writeCache } from '../utils/cache'
 import { dateValue, isActive, topTen, type Ascent, type Community, type Gym, type Route, type User } from '../utils/domain'
+import { COMMUNITY } from '../utils/queries'
 
 const client = new TopLoggerClient()
 const state = reactive({
@@ -11,6 +12,7 @@ const state = reactive({
   tab: 'routes' as 'routes' | 'top' | 'account', days: 60,
   selected: null as Route | null, community: null as Community | null,
   communityBusy: false, communityError: '', theme: 'system' as 'system' | 'light' | 'dark',
+  ascentBusy: false, ascentError: '', ascentAction: '',
 })
 let requestId = 0, detailsId = 0
 const PROFILE = cacheKey('_profile', '_', 'user')
@@ -40,7 +42,10 @@ async function loadHistory(id: number): Promise<void> {
   const userId = state.user.id, gymId = state.gymId
   state.historyError = ''
   try {
-    const history = await client.history(gymId, userId)
+    const sessionsKey = cacheKey(userId, gymId, 'historySessions')
+    const snapshot = await client.history(gymId, userId, readCache<HistorySnapshot>(sessionsKey)?.data)
+    if (id !== requestId) return
+    const history = snapshot.sessions.flatMap(session => session.logs)
     const known = new Set(state.routes.map(route => route.id))
     const cutoff = new Date(); cutoff.setHours(0, 0, 0, 0); cutoff.setDate(cutoff.getDate() - 180)
     const missing = [...new Set(history.filter(log => log.gymId === gymId && log.climbType === 'route' && log.valid && log.ticked && log.topped && dateValue(log.climbedAtDate) >= cutoff.getTime() && !known.has(log.climbId)).map(log => log.climbId))]
@@ -53,11 +58,12 @@ async function loadHistory(id: number): Promise<void> {
     state.routes = [...state.routes, ...recovered]
     save(cacheKey(userId, gymId, 'routes'), { routes: state.routes, liveIds: state.liveRouteIds })
     state.historyAt = save(cacheKey(userId, gymId, 'history'), history)
+    save(sessionsKey, snapshot)
     state.history = history; state.historyReady = true
   } catch (error) { if (id === requestId) state.historyError = report(error) }
 }
 async function refresh(): Promise<void> {
-  if (!state.user || !state.gymId || state.busy) return
+  if (!state.user || !state.gymId || state.busy || state.ascentBusy) return
   const id = ++requestId, userId = state.user.id, gymId = state.gymId
   state.busy = true; state.error = ''; state.cacheWarning = ''
   try {
@@ -107,14 +113,14 @@ async function connect(token: string): Promise<void> {
   await refresh()
 }
 async function selectGym(gymId: string): Promise<void> {
-  if (!state.user || gymId === state.gymId || !gyms.value.some(gym => gym.id === gymId)) return
+  if (state.ascentBusy || !state.user || gymId === state.gymId || !gyms.value.some(gym => gym.id === gymId)) return
   requestId++; detailsId++; state.busy = false; state.selected = null; state.error = ''; state.gymId = gymId
   save(cacheKey(state.user.id, '_', 'gym'), gymId)
   cachedGym(); await refresh()
 }
 async function selectTab(tab: typeof state.tab): Promise<void> {
   state.tab = tab
-  if (tab === 'top' && !state.historyReady && !state.busy && state.user && state.connected && !state.needsLogin) {
+  if (tab === 'top' && !state.historyReady && !state.busy && !state.ascentBusy && state.user && state.connected && !state.needsLogin) {
     const id = ++requestId; state.busy = true
     try { await loadHistory(id) } finally { if (id === requestId) state.busy = false }
   }
@@ -122,6 +128,7 @@ async function selectTab(tab: typeof state.tab): Promise<void> {
 async function openRoute(route: Route): Promise<void> {
   const id = ++detailsId
   state.selected = route; state.communityError = ''; state.communityBusy = true
+  state.ascentError = ''
   if (!state.user) return
   const key = cacheKey(state.user.id, state.gymId, `community:${route.id}`)
   state.community = readCache<Community>(key)?.data ?? null
@@ -131,8 +138,55 @@ async function openRoute(route: Route): Promise<void> {
   } catch (error) { if (id === detailsId) state.communityError = report(error) }
   finally { if (id === detailsId) state.communityBusy = false }
 }
-function closeRoute(): void { detailsId++; state.selected = null; state.community = null }
+async function submitAscent(tickType: number): Promise<void> {
+  if (!state.selected || !state.user || !state.connected || state.needsLogin || state.busy || state.ascentBusy) return
+  const route = state.selected, userId = state.user.id, gymId = state.gymId, detail = detailsId
+  state.ascentBusy = true; state.ascentError = ''; state.ascentAction = `${route.id}:ascent:${tickType}`
+  try {
+    const climbUser = tickType === -1 ? await client.unsend(gymId, userId, route.id) : await client.logAscent(gymId, userId, route, tickType)
+    const updated = { ...route, climbUser }
+    state.routes = state.routes.map(item => item.id === route.id ? updated : item)
+    save(cacheKey(userId, gymId, 'routes'), { routes: state.routes, liveIds: state.liveRouteIds })
+    // Unsend may change older days; invalidate only sessions containing this route.
+    state.historyReady = false; state.historyAt = ''
+    try {
+      localStorage.removeItem(cacheKey(userId, gymId, 'history'))
+      if (tickType === -1) {
+        const key = cacheKey(userId, gymId, 'historySessions')
+        const cached = readCache<HistorySnapshot>(key)?.data
+        if (Array.isArray(cached?.sessions)) save(key, { sessions: cached.sessions.filter(session => !session.logs.some(log => log.climbId === route.id)) })
+      }
+    }
+    catch { state.cacheWarning = 'Could not clear saved history. Refresh Top 10 to see your ascent.' }
+    if (detail === detailsId) state.selected = updated
+    if (state.tab === 'top') await loadHistory(++requestId)
+  } catch (error) { if (detail === detailsId) state.ascentError = report(error) }
+  finally { state.ascentBusy = false; state.ascentAction = '' }
+}
+async function submitGrade(grade: number): Promise<void> {
+  if (!state.selected || !state.user || !state.connected || state.needsLogin || state.busy || state.ascentBusy || state.selected.climbUser?.grade === grade) return
+  const route = state.selected, userId = state.user.id, gymId = state.gymId, detail = detailsId
+  state.ascentBusy = true; state.ascentError = ''; state.ascentAction = `${route.id}:grade:${grade}`
+  try {
+    const climbUser = await client.voteGrade(gymId, userId, route.id, grade)
+    const updated = { ...route, climbUser }
+    state.routes = state.routes.map(item => item.id === route.id ? updated : item)
+    save(cacheKey(userId, gymId, 'routes'), { routes: state.routes, liveIds: state.liveRouteIds })
+    if (detail === detailsId) state.selected = updated
+    // Refresh vote counts without fetching the toppers list or ascent history again.
+    try {
+      const { climb } = await client.query<{ climb: Pick<Community, 'gradeVoteStats' | 'ratingVoteStats'> }>(COMMUNITY, { gymId, id: route.id })
+      if (detail === detailsId && state.community && Array.isArray(climb?.gradeVoteStats)) {
+        state.community = { ...state.community, gradeVoteStats: climb.gradeVoteStats }
+        save(cacheKey(userId, gymId, `community:${route.id}`), state.community)
+      }
+    } catch { /* Personal grade is confirmed even if community statistics are temporarily unavailable. */ }
+  } catch (error) { if (detail === detailsId) state.ascentError = report(error) }
+  finally { state.ascentBusy = false; state.ascentAction = '' }
+}
+function closeRoute(): void { detailsId++; state.selected = null; state.community = null; state.ascentError = '' }
 async function logout(): Promise<void> {
+  if (state.ascentBusy) return
   requestId++; detailsId++; state.busy = false
   try { await client.disconnect() }
   catch { state.error = 'Could not clear your secure connection. Please retry signing out.'; return }
@@ -141,7 +195,7 @@ async function logout(): Promise<void> {
   state.connected = false; state.needsLogin = true; state.error = ''; state.tab = 'routes'
 }
 function clearSaved(): void {
-  if (!state.user) return
+  if (!state.user || state.ascentBusy) return
   clearCache(state.user.id); save(PROFILE, state.user)
   state.routes = []; state.liveRouteIds = []; state.history = []; state.historyReady = false; state.syncedAt = ''; state.historyAt = ''; state.community = null
 }
@@ -149,5 +203,5 @@ const gyms = computed(() => [...new Map([...(state.user?.gym ? [state.user.gym] 
 export function useTopLogger() {
   return { state, gyms, activeRoutes: computed(() => { const live = new Set(state.liveRouteIds); return state.routes.filter(route => live.has(route.id) && isActive(route)) }),
     ranked: computed(() => state.historyReady ? topTen(state.routes, state.history, state.gymId, state.days) : []),
-    initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, logout, clearSaved }
+    initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, submitAscent, submitGrade, logout, clearSaved }
 }

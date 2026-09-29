@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
-import { Browser } from '@capacitor/browser'
 import { loginToken } from './utils/login'
-import { ascentLabel, averageLabel, dateLabel, defaultWallSelection, frenchGrade, score } from './utils/domain'
+import { ascentLabel, averageLabel, dateLabel, defaultWallSelection, frenchGrade, gradeChoices, isActive, score } from './utils/domain'
 
-const { state, gyms, activeRoutes, ranked, initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, logout, clearSaved } = useTopLogger()
-const token = ref(''), showToken = ref(false), showFilters = ref(false), search = ref('')
+const { state, gyms, activeRoutes, ranked, initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, submitAscent, submitGrade, logout, clearSaved } = useTopLogger()
+const showFilters = ref(false), search = ref('')
 const signingIn = ref(false)
 const appVersion = ref('3.0.0')
 const grade = ref(''), selectedWalls = ref<string[]>([]), color = ref(''), status = ref('')
@@ -31,6 +30,12 @@ const communityRating = computed(() => {
   const votes = state.community?.ratingVoteStats ?? [], count = votes.reduce((sum, item) => sum + item.count, 0)
   return count ? `${(votes.reduce((sum, item) => sum + item.stars * item.count, 0) / count).toFixed(1)} / 5` : 'No ratings yet'
 })
+const gradeVotes = computed(() => [...(state.community?.gradeVoteStats ?? [])].filter(vote => vote.count > 0).sort((a, b) => a.grade - b.grade))
+const gradeVoteTotal = computed(() => gradeVotes.value.reduce((total, vote) => total + vote.count, 0))
+const mostVotedGrades = computed(() => {
+  const highest = Math.max(...gradeVotes.value.map(vote => vote.count), 0)
+  return gradeVotes.value.filter(vote => vote.count === highest).map(vote => frenchGrade(vote.grade)).join(' / ')
+})
 const synced = computed(() => {
   const value = state.tab === 'top' ? state.historyAt : state.syncedAt
   return value ? new Date(value).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
@@ -44,16 +49,11 @@ watch(() => state.theme, theme => {
   document.documentElement.dataset.theme = theme
   localStorage.setItem('tlp:theme', theme)
 })
-async function submitToken() { const value = token.value; token.value = ''; await connect(value) }
 async function signIn() {
   signingIn.value = true; state.error = ''
   try { const value = await loginToken(); await connect(value) }
-  catch (error) { state.error = error instanceof Error ? error.message : 'Sign-in could not be completed. Try token entry.' }
+  catch (error) { state.error = error instanceof Error ? error.message : 'Sign-in could not be completed. Please try again.' }
   finally { signingIn.value = false }
-}
-async function officialLogin() {
-  if (Capacitor.isNativePlatform()) await Browser.open({ url: 'https://app.toplogger.nu/en/sign-in' })
-  else window.open('https://app.toplogger.nu/en/sign-in', '_blank', 'noopener,noreferrer')
 }
 function resetFilters() { grade.value = ''; allWalls(); color.value = ''; status.value = ''; search.value = '' }
 async function changeTab(tab: typeof state.tab) { closeRoute(); await selectTab(tab); window.scrollTo({ top: 0 }) }
@@ -88,7 +88,7 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="app-header">
       <a class="brand" href="#" aria-label="TopLogger Plus home" @click.prevent="changeTab('routes')"><span>TopLogger <span class="brand-plus">Plus</span></span></a>
-      <label v-if="state.user && gyms.length" class="gym-picker"><span class="sr-only">Selected gym</span><select aria-label="Selected gym" :value="state.gymId" @change="selectGym(($event.target as HTMLSelectElement).value)"><option v-for="gym in gyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option></select></label>
+      <label v-if="state.user && gyms.length" class="gym-picker"><span class="sr-only">Selected gym</span><select aria-label="Selected gym" :value="state.gymId" :disabled="state.ascentBusy" @change="selectGym(($event.target as HTMLSelectElement).value)"><option v-for="gym in gyms" :key="gym.id" :value="gym.id">{{ gym.name }}</option></select></label>
       
     </header>
 
@@ -100,10 +100,8 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
 
           <div v-if="state.error" class="notice error" role="alert">{{ state.error }}</div>
           <button v-if="Capacitor.isNativePlatform()" class="primary full" :disabled="signingIn || state.busy" @click="signIn"><AppIcon name="connect" />{{ signingIn ? 'Waiting for TopLogger…' : 'Sign in with TopLogger' }}</button>
-          <p v-if="Capacitor.isNativePlatform()" class="login-alternative">Or connect with a refresh token</p>
-          <form @submit.prevent="submitToken"><label for="token">Refresh token</label><div class="token-input"><input id="token" v-model="token" :type="showToken ? 'text' : 'password'" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Paste your TopLogger refresh token" required :disabled="state.busy"><button type="button" :aria-pressed="showToken" @click="showToken = !showToken">{{ showToken ? 'Hide' : 'Show' }}</button></div><button class="primary full" :disabled="state.busy || !token.trim()"><span v-if="state.busy" class="spinner" /><AppIcon v-else name="connect" />{{ state.busy ? 'Connecting…' : 'Connect my account' }}</button></form>
-          <details class="token-help"><summary>How do I get my token?</summary><p>Sign in to TopLogger on a desktop browser. Open Developer Tools → Application → Local Storage → app.toplogger.nu. Find <code>tl-auth</code> and copy only <code>refresh.token</code>. Paste it above.</p><p>On Android, use Sign in with TopLogger above to connect automatically. Signing in through an external browser requires this token fallback.</p><button class="secondary full" @click="officialLogin">Open TopLogger sign-in ↗</button></details>
-          <p class="privacy-note">{{ Capacitor.isNativePlatform() ? 'Encrypted on your device. No Plus server. No password stored.' : 'Browser preview: tokens stay in memory for this session.' }}</p>
+          <p v-if="!Capacitor.isNativePlatform()" class="muted">Sign in using the Android app.</p>
+          <p class="privacy-note">{{ Capacitor.isNativePlatform() ? 'Encrypted on your device. No Plus server. No password stored.' : 'Browser preview.' }}</p>
         </div>
 
       </section>
@@ -117,18 +115,47 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
         <section v-if="state.selected" class="details-view">
           <button class="back-button" @click="back"><AppIcon name="back" />Back to {{ title }}</button>
           <div class="detail-hero"><div><span class="eyebrow">{{ state.selected.wall?.nameLoc || 'ROUTE DETAILS' }}</span><h1 ref="detailHeading" tabindex="-1">{{ frenchGrade(state.selected.grade) }}<span>{{ state.selected.name || (state.selected.label ? `Rope ${state.selected.label}` : 'Route') }}</span></h1><span class="badge topped">{{ ascentLabel(state.selected.climbUser?.tickType) }}</span></div><span class="detail-color" :style="{ background: /^#[a-f\d]{3,8}$/i.test(state.selected.holdColor?.color || '') ? state.selected.holdColor?.color : '#888' }" /></div>
+          <div v-if="isActive(state.selected) || state.selected.climbUser?.tickType" class="detail-panel">
+            <div class="ascent-buttons" aria-label="Log ascent">
+              <button v-for="type in [3, 2, 1]" :key="type" class="primary" :aria-pressed="state.selected.climbUser?.tickType === type" :disabled="!isActive(state.selected) || state.ascentBusy || state.busy || state.needsLogin || !state.connected || !!state.selected.climbUser?.tickType || (type > 1 && !!state.selected.climbUser?.totalTries) || typeof state.selected.leadEnabled !== 'boolean'" :aria-busy="state.ascentAction === `${state.selected.id}:ascent:${type}`" @click="submitAscent(type)"><span v-if="state.ascentAction === `${state.selected.id}:ascent:${type}`" class="spinner" aria-hidden="true" /><AppIcon v-else :name="type === 3 ? 'doubleCheck' : type === 2 ? 'flash' : 'check'" />{{ ascentLabel(type) }}</button>
+            </div>
+            <div class="try-row">
+              <button class="secondary" :disabled="!isActive(state.selected) || state.ascentBusy || state.busy || state.needsLogin || !state.connected || typeof state.selected.leadEnabled !== 'boolean'" :aria-busy="state.ascentAction === `${state.selected.id}:ascent:0`" @click="submitAscent(0)"><span v-if="state.ascentAction === `${state.selected.id}:ascent:0`" class="spinner" aria-hidden="true" /><AppIcon v-else name="plus" />Try</button>
+              <span class="try-count" role="status"><strong>{{ state.selected.climbUser?.totalTries || 0 }}</strong> {{ state.selected.climbUser?.totalTries === 1 ? 'try' : 'tries' }}</span>
+            </div>
+            <button v-if="state.selected.climbUser?.tickType" class="secondary full unsend-button" :disabled="state.ascentBusy || state.busy || state.needsLogin || !state.connected" :aria-busy="state.ascentAction === `${state.selected.id}:ascent:-1`" @click="submitAscent(-1)"><span v-if="state.ascentAction === `${state.selected.id}:ascent:-1`" class="spinner" aria-hidden="true" /><AppIcon v-else name="back" />Unsend</button>
+            <template v-if="gradeChoices(state.selected.grade).length">
+              <h3 class="grade-vote-title">Your grade</h3>
+              <div class="grade-buttons" role="group" aria-label="Vote on the grade">
+                <button v-for="(grade, index) in gradeChoices(state.selected.grade)" :key="index" class="secondary" :class="{ 'current-grade': index === 2, 'button-loading': state.ascentAction === `${state.selected.id}:grade:${grade}` }" :aria-busy="state.ascentAction === `${state.selected.id}:grade:${grade}`" :aria-pressed="grade !== null && state.selected.climbUser?.grade === grade" :disabled="grade === null || state.ascentBusy || state.busy || state.needsLogin || !state.connected || state.selected.climbUser?.grade === grade" @click="grade !== null && submitGrade(grade)"><span class="button-label">{{ grade === null ? '—' : frenchGrade(grade) }}</span><span v-if="state.ascentAction === `${state.selected.id}:grade:${grade}`" class="spinner" aria-hidden="true" /></button>
+              </div>
+            </template>
+            <div v-if="state.ascentError" class="notice error" role="alert">{{ state.ascentError }}</div>
+          </div>
           <div class="detail-panel"><h2>Route</h2><dl class="detail-grid"><div><dt>Wall</dt><dd>{{ state.selected.wall?.nameLoc || 'Unknown' }}</dd></div><div><dt>Rope / label</dt><dd>{{ state.selected.label || '—' }}</dd></div><div><dt>Hold color</dt><dd>{{ state.selected.holdColor?.nameLoc || 'Unknown' }}</dd></div><div><dt>Setter</dt><dd>{{ [...(state.selected.climbSetters || []).map(setter => setter.gymAdmin.name), ...(state.selected.setterName ? [state.selected.setterName] : [])].join(', ') || 'Unknown' }}</dd></div><div><dt>Set on</dt><dd>{{ dateLabel(state.selected.inAt) }}</dd></div><div><dt>Leaving / removed</dt><dd>{{ dateLabel(state.selected.outAt || state.selected.outPlannedAt) }}</dd></div></dl></div>
           <div class="detail-panel"><h2>Your ascents</h2><dl class="detail-grid"><div><dt>Attempts</dt><dd>{{ state.selected.climbUser?.totalTries || 0 }}</dd></div><div><dt>Best ascent</dt><dd>{{ ascentLabel(state.selected.climbUser?.tickType) }}</dd></div><div><dt>Your grade</dt><dd>{{ frenchGrade(state.selected.climbUser?.grade) }}</dd></div><div><dt>Score</dt><dd>{{ score(state.selected.grade, state.selected.climbUser?.tickType || 0) ?? '—' }}</dd></div><div><dt>First attempt</dt><dd>{{ dateLabel(state.selected.climbUser?.triedFirstAtDate) }}</dd></div><div><dt>First top</dt><dd>{{ dateLabel(state.selected.climbUser?.tickedFirstAtDate) }}</dd></div></dl></div>
-          <div class="detail-panel"><div class="section-heading"><h2>Community</h2><span v-if="state.communityBusy" class="spinner" aria-label="Loading community data" /></div><div v-if="state.communityError" class="notice error" role="alert">{{ state.communityError }}<button @click="openRoute(state.selected!)">Retry</button></div><template v-if="state.community"><h3>Grade votes</h3><div class="vote-chips"><span v-for="vote in state.community.gradeVoteStats" :key="vote.grade" class="badge">{{ frenchGrade(vote.grade) }} · {{ vote.count }} {{ vote.count === 1 ? 'vote' : 'votes' }}</span><p v-if="!state.community.gradeVoteStats.length" class="muted">No grade votes yet.</p></div><h3>Rating <span class="muted">{{ communityRating }}</span></h3><div class="rating-row" v-for="vote in state.community.ratingVoteStats" :key="vote.stars"><span>{{ vote.stars }} stars</span><meter :value="vote.count" :max="Math.max(...state.community.ratingVoteStats.map(item => item.count), 1)" :aria-label="`${vote.count} votes for ${vote.stars} stars`" /><span>{{ vote.count }}</span></div><h3>Toppers</h3><p v-if="state.community.toppersUnavailable" class="muted">TopLogger has not made the toppers list available.</p><p v-else-if="!state.community.toppers.length" class="muted">No public tops yet.</p><ul v-else class="toppers"><li v-for="topper in state.community.toppers" :key="topper.id"><AppIcon name="check" /><span>{{ topper.user?.fullName || 'Anonymous climber' }}</span><span class="muted">{{ ascentLabel(topper.tickType) }}<template v-if="topper.grade"> · {{ frenchGrade(topper.grade) }}</template></span></li></ul></template></div>
+          <div class="detail-panel"><div class="section-heading"><h2>Community</h2><span v-if="state.communityBusy" class="spinner" aria-label="Loading community data" /></div><div v-if="state.communityError" class="notice error" role="alert">{{ state.communityError }}<button @click="openRoute(state.selected!)">Retry</button></div><template v-if="state.community"><h3>Grade votes</h3>
+            <template v-if="gradeVoteTotal">
+              <div class="grade-vote-summary"><strong>{{ mostVotedGrades }}</strong><span>Most voted · {{ gradeVoteTotal }} {{ gradeVoteTotal === 1 ? 'vote' : 'votes' }}</span></div>
+              <ul class="grade-vote-list" aria-label="Community grade votes">
+                <li v-for="vote in gradeVotes" :key="vote.grade" :class="{ 'your-grade-vote': vote.grade === state.selected.climbUser?.grade }">
+                  <div class="grade-vote-label"><strong>{{ frenchGrade(vote.grade) }}</strong><span v-if="vote.grade === state.selected.grade" class="grade-vote-tag">Route grade</span><span v-if="vote.grade === state.selected.climbUser?.grade" class="grade-vote-tag your-vote-tag">Your vote</span></div>
+                  <div class="grade-vote-result"><span class="grade-vote-track" aria-hidden="true"><span :style="{ width: `${vote.count / gradeVoteTotal * 100}%` }" /></span><span class="grade-vote-count"><strong>{{ vote.count }}</strong> {{ vote.count === 1 ? 'vote' : 'votes' }} <span class="muted">· {{ Math.round(vote.count / gradeVoteTotal * 100) }}%</span></span></div>
+                </li>
+              </ul>
+            </template>
+            <p v-else class="muted">No grade votes yet.</p>
+            <p v-if="state.selected.climbUser?.grade" class="grade-personal-vote">Your vote: <strong>{{ frenchGrade(state.selected.climbUser.grade) }}</strong></p>
+            <h3>Rating <span class="muted">{{ communityRating }}</span></h3><div class="rating-row" v-for="vote in state.community.ratingVoteStats" :key="vote.stars"><span>{{ vote.stars }} stars</span><meter :value="vote.count" :max="Math.max(...state.community.ratingVoteStats.map(item => item.count), 1)" :aria-label="`${vote.count} votes for ${vote.stars} stars`" /><span>{{ vote.count }}</span></div><h3>Toppers</h3><p v-if="state.community.toppersUnavailable" class="muted">TopLogger has not made the toppers list available.</p><p v-else-if="!state.community.toppers.length" class="muted">No public tops yet.</p><ul v-else class="toppers"><li v-for="topper in state.community.toppers" :key="topper.id"><AppIcon name="check" /><span>{{ topper.user?.fullName || 'Anonymous climber' }}</span><span class="muted">{{ ascentLabel(topper.tickType) }}<template v-if="topper.grade"> · {{ frenchGrade(topper.grade) }}</template></span></li></ul></template></div>
         </section>
 
         <section v-else-if="state.tab === 'account'">
           <div class="page-heading"><div><h1>Account</h1></div></div>
           <div class="profile-card"><span class="avatar">{{ state.user.fullName?.slice(0, 1) || '?' }}</span><div><h2>{{ state.user.fullName }}</h2><p>{{ gyms.find(gym => gym.id === state.gymId)?.name || 'No gym selected' }}</p></div><span class="badge" :class="{ topped: !state.needsLogin }">{{ state.needsLogin ? 'Reconnect' : 'Connected' }}</span></div>
-          <div v-if="state.needsLogin" class="detail-panel"><h2>Reconnect TopLogger</h2><button v-if="Capacitor.isNativePlatform()" class="primary full" :disabled="signingIn || state.busy" @click="signIn">Sign in with TopLogger</button><p class="muted login-alternative">Or paste a fresh refresh token from TopLogger’s browser storage (<code>tl-auth → refresh.token</code>).</p><form @submit.prevent="submitToken"><label for="reconnect-token">Refresh token</label><input id="reconnect-token" v-model="token" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required><button class="primary full" :disabled="state.busy || !token.trim()">{{ state.busy ? 'Connecting…' : 'Reconnect' }}</button></form></div>
+          <div v-if="state.needsLogin" class="detail-panel"><h2>Reconnect TopLogger</h2><button v-if="Capacitor.isNativePlatform()" class="primary full" :disabled="signingIn || state.busy" @click="signIn">{{ signingIn ? 'Waiting for TopLogger…' : 'Sign in with TopLogger' }}</button><p v-else class="muted">Sign in using the Android app.</p></div>
           <div class="detail-panel"><h2>Appearance</h2><div class="segmented"><button v-for="theme in (['system', 'light', 'dark'] as const)" :key="theme" :aria-pressed="state.theme === theme" @click="state.theme = theme">{{ theme[0]!.toUpperCase() + theme.slice(1) }}</button></div></div>
-          <div class="detail-panel"><h2>Saved data</h2><p class="muted">Clear offline data. Keep your login.</p><button class="secondary full" :disabled="state.busy" @click="clearSaved">Clear saved data</button></div>
-          <button class="danger full" @click="logout">Sign out and remove account data</button><p class="account-footer">TopLogger Plus {{ appVersion }}</p>
+          <div class="detail-panel"><h2>Saved data</h2><p class="muted">Clear offline data. Keep your login.</p><button class="secondary full" :disabled="state.busy || state.ascentBusy" @click="clearSaved">Clear saved data</button></div>
+          <button class="danger full" :disabled="state.ascentBusy" @click="logout">Sign out and remove account data</button><p class="account-footer">TopLogger Plus {{ appVersion }}</p>
         </section>
 
         <section v-else>

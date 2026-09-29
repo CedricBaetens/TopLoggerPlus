@@ -9,6 +9,7 @@ const paths: Record<string, string> = {
   arrow: 'm9 5 7 7-7 7', close: 'm6 6 12 12 M6 18 18 6', back: 'm14 5-7 7 7 7',
   check: 'm5 12 4 4L19 6', doubleCheck: 'm2 12 4 4L16 6 M12 16 22 6', flash: 'm14 3-9 11h6l-1 7 9-11h-6z', mountain: 'm3 20 7-15 5 9 3-5 4 11 M7 20l5-10 5 10',
   filter: 'M4 6h16 M7 12h10 M10 18h4', connect: 'M9 15l6-6 M8 17l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0 M16 7l1-1a4 4 0 1 1 6 6l-4 4a4 4 0 0 1-6 0',
+  plus: 'M12 5v14 M5 12h14',
 }
 </script>
 <template><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path :d="paths[props.name] || paths.routes" /></svg></template>

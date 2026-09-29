@@ -1,11 +1,13 @@
 import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core'
-import type { Ascent, Community, Route, User } from './domain'
-import { REFRESH, USER, ROUTES, ROUTE, DAYS, HISTORY, COMMUNITY, TOPPERS } from './queries'
+import type { Ascent, ClimbUser, Community, Route, User } from './domain'
+import { FRENCH_GRADES } from './domain'
+import { REFRESH, USER, ROUTES, ROUTE, DAYS, HISTORY, COMMUNITY, TOPPERS, LOG_ASCENT, ROUTE_LOGS, UNSEND, GRADE_VOTE } from './queries'
 
 export class ApiError extends Error {
   constructor(public kind: 'auth' | 'network' | 'api' | 'storage', message: string) { super(message) }
 }
 export interface Tokens { access: { token: string; expiresAt: string }; refresh: { token: string; expiresAt: string } }
+export interface HistorySnapshot { sessions: { date: string; at: string; logs: Ascent[] }[] }
 interface Vault { read(): Promise<{ value?: string }>; write(options: { value: string }): Promise<void>; clear(): Promise<void> }
 const vault = registerPlugin<Vault>('TokenVault')
 export type Transport = (query: string, variables: Record<string, unknown>, token?: string) => Promise<any>
@@ -59,7 +61,7 @@ export class TopLoggerClient {
     } catch { throw new ApiError('storage', 'Could not unlock your saved connection. Please connect again.') }
   }
   async connect(token: string): Promise<void> {
-    if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token.trim())) throw new ApiError('auth', 'Paste a complete TopLogger refresh token.')
+    if (!/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token.trim())) throw new ApiError('auth', 'TopLogger did not return a valid connection. Please sign in again.')
     this.generation++
     await this.refresh(token.trim())
   }
@@ -83,7 +85,7 @@ export class TopLoggerClient {
   private async access(): Promise<string> {
     if (!this.tokens) throw new ApiError('auth', 'Connect your TopLogger account to continue.')
     if (Date.parse(this.tokens.access.expiresAt) > Date.now() + 60000) return this.tokens.access.token
-    if (Date.parse(this.tokens.refresh.expiresAt) <= Date.now()) throw new ApiError('auth', 'Your connection has expired. Paste a fresh refresh token.')
+    if (Date.parse(this.tokens.refresh.expiresAt) <= Date.now()) throw new ApiError('auth', 'Your connection has expired. Please sign in again.')
     return this.refresh(this.tokens.refresh.token)
   }
   async query<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -127,24 +129,84 @@ export class TopLoggerClient {
     if (routes.some(route => !route || typeof route.id !== 'string' || !Number.isFinite(route.grade))) throw new ApiError('api', 'TopLogger returned incomplete route data.')
     return routes
   }
-  async history(gymId: string, userId: string): Promise<Ascent[]> {
+  async history(gymId: string, userId: string, cached?: HistorySnapshot): Promise<HistorySnapshot> {
+    const now = Date.now(), week = 7 * 86400000
     const cutoff = new Date(); cutoff.setHours(0, 0, 0, 0); cutoff.setDate(cutoff.getDate() - 180)
     const days = await this.pages<{ id: string; gymId: string; statsAtDate: string }>(DAYS, 'climbDaysPaginated', { userId, from: cutoff.toISOString(), until: new Date().toISOString() })
     if (days.some(day => !day || typeof day.gymId !== 'string' || !Number.isFinite(Date.parse(day.statsAtDate)))) throw new ApiError('api', 'TopLogger returned incomplete session dates.')
     const dates = [...new Set(days.filter(day => day.gymId === gymId).map(day => day.statsAtDate))]
-    const logs: Ascent[] = []
-    // Follow the official history view: load logs by climbing day, within the ranking window.
-    for (let offset = 0; offset < dates.length; offset += 4) {
-      const batches = await Promise.all(dates.slice(offset, offset + 4).map(date => this.pages<Ascent>(HISTORY, 'climbLogs', { gymId, userId, date })))
-      logs.push(...batches.flat())
+    const validLogs = (logs: Ascent[]) => Array.isArray(logs) && logs.every(log => log && typeof log.id === 'string' && log.gymId === gymId && typeof log.climbId === 'string' && Number.isFinite(Date.parse(log.climbedAtDate)))
+    const previous = new Map((Array.isArray(cached?.sessions) ? cached.sessions : []).filter(session => session && typeof session.date === 'string' && validLogs(session.logs)).map(session => [session.date, session]))
+    const sessions: HistorySnapshot['sessions'] = []
+    const missing: string[] = []
+    for (const date of dates) {
+      const session = previous.get(date), age = session ? now - Date.parse(session.at) : NaN
+      // ponytail: older edits can lag by a week; add server change markers if the API exposes them.
+      if (session && Date.parse(date) < now - week && age >= 0 && age < week) sessions.push(session)
+      else missing.push(date)
     }
-    if (logs.some(log => !log || typeof log.id !== 'string' || typeof log.gymId !== 'string' || typeof log.climbId !== 'string' || typeof log.climbedAtDate !== 'string')) throw new ApiError('api', 'TopLogger returned incomplete ascent history.')
-    return logs
+    // Cache complete days, including empty ones. The current day list drops deleted/expired sessions.
+    for (let offset = 0; offset < missing.length; offset += 4) {
+      const batches = await Promise.all(missing.slice(offset, offset + 4).map(async date => {
+        const logs = await this.pages<Ascent>(HISTORY, 'climbLogs', { gymId, userId, date })
+        if (!validLogs(logs)) throw new ApiError('api', 'TopLogger returned incomplete ascent history.')
+        return { date, at: new Date().toISOString(), logs }
+      }))
+      sessions.push(...batches)
+    }
+    return { sessions }
   }
   async route(gymId: string, id: string, userId: string): Promise<Route> {
     const data = await this.query<{ climb: Route | null }>(ROUTE, { gymId, id, userId })
     if (typeof data.climb?.id !== 'string' || !Number.isFinite(data.climb.grade)) throw new ApiError('api', 'This historical route is no longer available from TopLogger.')
     return data.climb
+  }
+  async logAscent(gymId: string, userId: string, route: Route, tickType: number, lead = !!route.leadRequired): Promise<ClimbUser> {
+    if (![0, 1, 2, 3].includes(tickType)) throw new ApiError('api', 'Choose Try, Redpoint, Flash, or Onsight.')
+    if (tickType > 1 && (route.climbUser?.totalTries || route.climbUser?.tickType)) throw new ApiError('api', 'Flash and Onsight require a first attempt. Choose Redpoint for another ascent.')
+    if (typeof route.leadEnabled !== 'boolean' || typeof route.leadRequired !== 'boolean') throw new ApiError('api', 'Refresh routes before saving an ascent.')
+    const today = new Date()
+    const climbedAtDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    try {
+      const data = await this.query<{ climbUsers: (ClimbUser & { climbId: string })[] }>(LOG_ASCENT, {
+        gymId, userId, climbIds: [route.id], climbLogTriesBefore: tickType === 1 && !route.climbUser?.totalTries ? 1 : 0,
+        climbLogData: { topped: tickType > 0, foreknowledge: tickType === 1 || tickType === 2, zones: 0, lead: route.leadEnabled ? lead : !!route.leadRequired, climbedAtDate },
+      })
+      const saved = data.climbUsers?.find(item => item.climbId === route.id)
+      if (!saved || !Number.isFinite(saved.tickType) || !Number.isFinite(saved.totalTries)) throw new ApiError('network', 'Incomplete save response.')
+      return saved
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.kind !== 'auth') throw new ApiError('network', 'Could not confirm whether the ascent was saved. Check TopLogger before saving again.')
+      throw error
+    }
+  }
+  async unsend(gymId: string, userId: string, routeId: string): Promise<ClimbUser | null> {
+    const logs = await this.pages<{ id: string; gymId: string; climbId: string; valid: boolean; topped: boolean; autoAdded: boolean }>(ROUTE_LOGS, 'climbLogs', { gymId, userId, climbId: routeId })
+    if (logs.some(log => !log || typeof log.id !== 'string' || log.gymId !== gymId || log.climbId !== routeId || typeof log.valid !== 'boolean' || typeof log.topped !== 'boolean' || typeof log.autoAdded !== 'boolean')) throw new ApiError('api', 'Could not verify this route’s ascents. Refresh and try again.')
+    // Match the official Redpoint uncheck: keep genuine attempts, remove sends and generated attempts.
+    const ids = logs.filter(log => log.valid && (log.topped || log.autoAdded)).map(log => log.id)
+    if (!ids.length) return (await this.route(gymId, routeId, userId)).climbUser
+    try {
+      const data = await this.query<{ climbUsers: (ClimbUser & { climbId: string })[] }>(UNSEND, { gymId, userId, ids })
+      const updated = data.climbUsers?.find(item => item.climbId === routeId)
+      if (updated && Number.isFinite(updated.tickType) && Number.isFinite(updated.totalTries)) return updated
+      return (await this.route(gymId, routeId, userId)).climbUser
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.kind !== 'auth') throw new ApiError('network', 'Could not confirm whether the sends were removed. Check TopLogger before trying again.')
+      throw error
+    }
+  }
+  async voteGrade(gymId: string, userId: string, routeId: string, grade: number): Promise<ClimbUser> {
+    if (!FRENCH_GRADES.includes(grade)) throw new ApiError('api', 'Choose a valid French grade.')
+    try {
+      const data = await this.query<{ climbUsers: (ClimbUser & { climbId: string })[] }>(GRADE_VOTE, { gymId, userId, climbIds: [routeId], grade })
+      const updated = data.climbUsers?.find(item => item.climbId === routeId)
+      if (!updated || updated.grade !== grade || !Number.isFinite(updated.tickType) || !Number.isFinite(updated.totalTries)) throw new ApiError('network', 'Incomplete grade response.')
+      return updated
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.kind !== 'auth') throw new ApiError('network', 'Could not confirm whether your grade was saved. Check TopLogger before trying again.')
+      throw error
+    }
   }
   async community(gymId: string, id: string): Promise<Community> {
     const data = await this.query<{ climb: Omit<Community, 'toppers'> | null }>(COMMUNITY, { gymId, id })

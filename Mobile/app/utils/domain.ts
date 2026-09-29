@@ -8,6 +8,7 @@ export interface ClimbUser {
   triedFirstAtDate: string | null; tickedFirstAtDate: string | null
 }
 export interface Route {
+  leadEnabled?: boolean; leadRequired?: boolean
   id: string; grade: number; name: string | null; label: string | null
   wall: { nameLoc: string } | null; holdColor: { color: string; nameLoc: string } | null
   setterName: string | null; climbSetters: { gymAdmin: { name: string } }[]
@@ -18,6 +19,11 @@ export interface Ascent {
   climbedAtDate: string; valid: boolean; ticked: boolean; topped: boolean
 }
 export interface RankedRoute { route: Route; ascent: Ascent; score: number }
+export const FRENCH_GRADES = [200, 300, 333, 367, 400, 433, 467, ...Array.from({ length: 5 }, (_, index) => [0, 17, 33, 50, 67, 83].map(offset => (index + 5) * 100 + offset)).flat()].filter(grade => grade <= 950)
+export function gradeChoices(grade: number): (number | null)[] {
+  const index = FRENCH_GRADES.findIndex(value => frenchGrade(value) === frenchGrade(grade))
+  return index < 0 ? [] : [-2, -1, 0, 1, 2].map(offset => FRENCH_GRADES[index + offset] ?? null)
+}
 export interface Community {
   gradeVoteStats: { grade: number; count: number }[]
   ratingVoteStats: { stars: number; count: number }[]
@@ -26,6 +32,10 @@ export interface Community {
 }
 export function frenchGrade(grade: number | null | undefined): string {
   if (!grade || !Number.isFinite(grade)) return '?'
+  if (grade < 500) {
+    const value = FRENCH_GRADES.filter(value => value < 500).reduce((best, value) => Math.abs(value - grade) < Math.abs(best - grade) ? value : best, 200)
+    return ['2', '3a', '3b', '3c', '4a', '4b', '4c'][FRENCH_GRADES.indexOf(value)]!
+  }
   const letters = ['a', 'a+', 'b', 'b+', 'c', 'c+']
   const rest = grade % 100
   return `${Math.floor(grade / 100)}${letters[rest < 9 ? 0 : rest < 25 ? 1 : rest < 42 ? 2 : rest < 59 ? 3 : rest < 75 ? 4 : 5]}`

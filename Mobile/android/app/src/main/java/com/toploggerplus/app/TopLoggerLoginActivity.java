@@ -70,7 +70,7 @@ public class TopLoggerLoginActivity extends AppCompatActivity {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (!request.isForMainFrame()) return false;
                 if (officialUrl(request.getUrl().toString())) return false;
-                title.setText("Use email sign-in here, or a refresh token in Plus.");
+                title.setText("Please use email sign-in here.");
                 return true;
             }
         });

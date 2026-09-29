@@ -1,6 +1,6 @@
 # TopLogger Plus — Android
 
-Nuxt 4 / Vue 3 / TypeScript UI, bundled locally with Capacitor 8. No hosted backend, write-back operations, or bundled sample account data.
+Nuxt 4 / Vue 3 / TypeScript UI, bundled locally with Capacitor 8. No hosted backend or bundled sample account data. Ascents are saved directly to TopLogger when requested.
 
 ## Build and install
 
@@ -23,7 +23,13 @@ On this workstation, tools are under `C:/Users/CedricBaetens/.codex/android-tool
 
 Tap **Sign in with TopLogger** on Android. The app opens TopLogger's official HTTPS page; enter your credentials and complete its verification there. Plus reads the resulting refresh token, removes the web session and saves the token in its encrypted Android vault. Live sign-in and session restoration have been verified on Android.
 
-Fallback: sign in at https://app.toplogger.nu on a desktop browser. Developer Tools → Application → Local Storage → app.toplogger.nu → `tl-auth`: copy **only `refresh.token`**, then paste it into Plus. External browser sessions are not transferred automatically. Embedded sign-in allows the official origin only; use email sign-in or the token fallback if a social provider requires an external page. Never post credentials in chat or commit them.
+Embedded sign-in allows the official origin only; use email sign-in if a social provider requires an external page. Manual token entry is not available.
+
+Open a route and tap **Redpoint**, **Flash**, or **Onsight** directly below its heading to log today's ascent. Flash and Onsight require an unattempted route. Logging uses Lead when the route requires it, otherwise Top rope. Sent routes offer **Unsend**, which removes all valid sends and automatically generated attempts for that route while retaining genuine attempts. Personal statistics update from TopLogger, and only affected history sessions are invalidated. Connection failures never automatically retry a write; check TopLogger before trying again because the change may have succeeded.
+
+The **Your grade** row offers five one-tap votes: two easier grades, the route's official grade, and two harder grades. Your saved vote is highlighted. At the ends of the French scale, unavailable grades are disabled. A vote updates your personal grade and refreshes community grade counts without reloading history or toppers.
+
+Tap **Try** to add one untopped attempt for today. The attempt count beside the button updates from TopLogger's response and includes all recorded attempts, including sends. Logging a try preserves existing sends and grade votes; after the first attempt, Flash and Onsight are unavailable. Unsend keeps genuine tries.
 
 Tokens are AES-GCM encrypted with a non-exportable AndroidKeyStore key. Android backup is disabled. Non-secret route/history/community snapshots live in WebView local storage, versioned and scoped by user/gym. Browser development keeps tokens in memory only. Logout deletes secure credentials and cached account data; clearing saved data retains the connection.
 
@@ -48,7 +54,7 @@ The API check validates live GraphQL shapes without credentials; it does **not**
 
 | Feature | Implementation | Verification |
 | --- | --- | --- |
-| Login / refresh / logout | Official embedded sign-in + token fallback, serialized refresh, one auth retry, secure storage | Live sign-in and route loading confirmed on S26 Ultra; Android vault/origin/capture tests pass; live logout pending |
+| Login / refresh / logout | Official embedded sign-in, serialized refresh, one auth retry, secure storage | Live sign-in and route loading confirmed on S26 Ultra; Android vault/origin/capture tests pass; live logout pending |
 | Account and favorite gyms | Local selection and scoped caches; TopLogger preference unchanged | Browser switch/isolation checks |
 | Routes and details | Grade, personal grade, color/name, wall, rope/label, setters, attempts, dates, status, score | Browser checks; schema accepted |
 | Refresh / offline | Button and pull gesture, last successful sync, cache preserved on failure | Browser failure checks; gesture/device pending |
@@ -60,6 +66,8 @@ The API check validates live GraphQL shapes without credentials; it does **not**
 **Remaining parity checks:** history access now works with the live account. Complete historical ranking comparison, metadata for removed climbs, and the complete toppers list still need verification. An inaccessible archived route fails history loading rather than silently returning a partial Top 10. Saved rankings remain available with an error message when a later sync fails.
 
 First-top dates are displayed in details, never substituted for history. Ranking uses current route grades, matching the old rule. Schema changes produce API errors, not fabricated data. Cache updates replace complete snapshots atomically. Web deployment, desktop packaging and iOS builds are deferred.
+
+History refresh always checks the 180-day session list, but reuses cached logs for older sessions for up to seven days. Sessions within the last seven days and newly discovered sessions are fetched on every refresh. Deleted sessions are dropped; refreshed sessions replace their previous logs, including when all ascents were deleted. Older edits can take up to a week to appear. **Account → Clear saved data**, followed by refreshing Top 10, forces a full reload. Existing installations perform one full history reload to populate the per-session cache.
 
 ### Physical-device checklist
 

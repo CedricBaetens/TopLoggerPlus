@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { frenchGrade, score, topTen, isActive, averageLabel, colorValue, defaultWallSelection, type Route, type Ascent } from '../app/utils/domain'
+import { frenchGrade, gradeChoices, score, topTen, isActive, averageLabel, colorValue, defaultWallSelection, type Route, type Ascent } from '../app/utils/domain'
 import { cacheKey, clearCache, readCache, writeCache } from '../app/utils/cache'
 import { ApiError, TopLoggerClient, historyFailure, type Tokens, type Transport } from '../app/utils/toplogger'
-import { REFRESH, USER, ROUTES, DAYS, HISTORY } from '../app/utils/queries'
+import { REFRESH, USER, ROUTES, DAYS, HISTORY, LOG_ASCENT, ROUTE_LOGS, UNSEND, GRADE_VOTE } from '../app/utils/queries'
 
 const route = (id: string, grade = 600, outAt: string | null = null): Route => ({ id, grade, outAt, name: null, label: '1', wall: null, holdColor: null, setterName: null, climbSetters: [], inAt: null, outPlannedAt: null, climbUser: null })
 const log = (climbId: string, tickType = 1, climbedAtDate = '2026-09-20', gymId = 'gym'): Ascent => ({ id: `${climbId}-${climbedAtDate}`, gymId, climbId, climbType: 'route', tickType, climbedAtDate, valid: true, ticked: true, topped: true })
@@ -35,7 +35,184 @@ test('History requests include the selected gym and account', async () => {
     return { climbLogs: { data: [log('route')], pagination: { total: 1, page: 1, perPage: 200 } } }
   }, undefined, false)
   await client.connect('header.payload.signature')
-  assert.equal((await client.history('gym', 'user')).length, 1)
+  assert.equal((await client.history('gym', 'user')).sessions[0]?.logs.length, 1)
+})
+
+test('Ascent logging uses TopLogger first-try semantics, current local date, and lead selection', async () => {
+  const calls: Record<string, any>[] = []
+  const client = new TopLoggerClient(async (query, variables) => {
+    if (query === REFRESH) return { tokens: tokens() }
+    assert.equal(query, LOG_ASCENT); calls.push(variables)
+    return { climbUsers: [{ climbId: 'route', grade: null, tickType: 1, totalTries: 2, triedFirstAtDate: null, tickedFirstAtDate: null }] }
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  const climb = { ...route('route'), leadEnabled: true, leadRequired: true }
+  for (const type of [1, 2, 3]) await client.logAscent('gym', 'user', climb, type, true)
+  assert.deepEqual(calls.map(call => [call.climbLogTriesBefore, call.climbLogData.foreknowledge]), [[1, true], [0, true], [0, false]])
+  for (const call of calls) {
+    assert.equal(call.gymId, 'gym'); assert.equal(call.userId, 'user'); assert.deepEqual(call.climbIds, ['route'])
+    assert.equal(call.climbLogData.topped, true); assert.equal(call.climbLogData.lead, true); assert.equal(call.climbLogData.zones, 0)
+    const date = new Date(call.climbLogData.climbedAtDate + 'T00:00:00')
+    assert.equal(date.toDateString(), new Date().toDateString())
+  }
+  const attempted = { ...climb, climbUser: { grade: null, tickType: 0, totalTries: 3, triedFirstAtDate: null, tickedFirstAtDate: null } }
+  await assert.rejects(client.logAscent('gym', 'user', attempted, 2, true))
+  await assert.rejects(client.logAscent('gym', 'user', attempted, 3, true))
+  await assert.rejects(client.logAscent('gym', 'user', climb, 4, true))
+  await assert.rejects(client.logAscent('gym', 'user', route('route'), 1, true))
+  assert.equal(calls.length, 3)
+  await client.logAscent('gym', 'user', attempted, 1, false)
+  assert.equal(calls[3]?.climbLogTriesBefore, 0); assert.equal(calls[3]?.climbLogData.lead, false)
+})
+
+test('An uncertain ascent write is never retried', async () => {
+  let writes = 0
+  const client = new TopLoggerClient(async query => {
+    if (query === REFRESH) return { tokens: tokens() }
+    writes++; throw new ApiError('network', 'timeout')
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  await assert.rejects(client.logAscent('gym', 'user', { ...route('route'), leadEnabled: false, leadRequired: false }, 1, false), /Check TopLogger before saving again/)
+  assert.equal(writes, 1)
+})
+
+test('A try records an untopped attempt without replacing an existing send', async () => {
+  let tries = 2
+  const climb = { ...route('route'), leadEnabled: false, leadRequired: false, climbUser: { grade: 633, tickType: 1, totalTries: tries, triedFirstAtDate: null, tickedFirstAtDate: null } }
+  const client = new TopLoggerClient(async (query, variables) => {
+    if (query === REFRESH) return { tokens: tokens() }
+    assert.equal(query, LOG_ASCENT)
+    assert.equal(variables.climbLogTriesBefore, 0)
+    const data = variables.climbLogData as Record<string, unknown>
+    assert.equal(data.topped, false); assert.equal(data.foreknowledge, false); assert.equal(data.zones, 0)
+    return { climbUsers: [{ climbId: climb.id, ...climb.climbUser, totalTries: ++tries }] }
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  for (const expected of [3, 4]) {
+    climb.climbUser = await client.logAscent('gym', 'user', climb, 0)
+    assert.equal(climb.climbUser.totalTries, expected); assert.equal(climb.climbUser.tickType, 1); assert.equal(climb.climbUser.grade, 633)
+  }
+})
+
+test('Five grade choices keep the route grade centered across number boundaries and scale limits', () => {
+  assert.deepEqual(gradeChoices(633), [600, 617, 633, 650, 667])
+  assert.deepEqual(gradeChoices(700), [667, 683, 700, 717, 733])
+  assert.deepEqual(gradeChoices(467), [400, 433, 467, 500, 517])
+  assert.deepEqual(gradeChoices(200), [null, null, 200, 300, 333])
+  assert.deepEqual(gradeChoices(950), [917, 933, 950, null, null])
+  assert.deepEqual(gradeChoices(0), [])
+  assert.deepEqual(gradeChoices(633).map(grade => frenchGrade(grade)), ['6a', '6a+', '6b', '6b+', '6c'])
+  assert.equal(frenchGrade(433), '4b')
+})
+
+test('Grade voting updates only the selected route’s opinion and never retries uncertain writes', async () => {
+  let calls = 0, fail = false
+  const updated = { climbId: 'route', grade: 650, tickType: 2, totalTries: 1, triedFirstAtDate: null, tickedFirstAtDate: null }
+  const client = new TopLoggerClient(async (query, variables) => {
+    if (query === REFRESH) return { tokens: tokens() }
+    assert.equal(query, GRADE_VOTE); calls++
+    assert.deepEqual(variables, { gymId: 'gym', userId: 'user', climbIds: ['route'], grade: 650 })
+    if (fail) throw new ApiError('network', 'timeout')
+    return { climbUsers: [updated] }
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  assert.deepEqual(await client.voteGrade('gym', 'user', 'route', 650), updated)
+  await assert.rejects(client.voteGrade('gym', 'user', 'route', 651), /valid French grade/)
+  assert.equal(calls, 1)
+  fail = true
+  await assert.rejects(client.voteGrade('gym', 'user', 'route', 650), /Check TopLogger/)
+  assert.equal(calls, 2)
+})
+
+test('Unsend deletes only this route’s valid sends and generated attempts across all pages', async () => {
+  let pages = 0, deletes = 0
+  const updated = { climbId: 'route', grade: null, tickType: 0, totalTries: 1, triedFirstAtDate: null, tickedFirstAtDate: null }
+  const client = new TopLoggerClient(async (query, variables) => {
+    if (query === REFRESH) return { tokens: tokens() }
+    if (query === ROUTE_LOGS) {
+      pages++
+      assert.equal(variables.gymId, 'gym'); assert.equal(variables.userId, 'user'); assert.equal(variables.climbId, 'route')
+      const logs = pages === 1 ? [{ id: 'old-send', topped: true, autoAdded: false }, { id: 'real-attempt', topped: false, autoAdded: false }] : [{ id: 'recent-send', topped: true, autoAdded: false }, { id: 'generated-attempt', topped: false, autoAdded: true }, { id: 'invalid-send', topped: true, autoAdded: false, valid: false }]
+      return { climbLogs: { data: logs.map(log => ({ gymId: 'gym', climbId: 'route', valid: true, ...log })), pagination: { total: 4, page: pages, perPage: 2 } } }
+    }
+    assert.equal(query, UNSEND); deletes++
+    assert.deepEqual(variables.ids, ['old-send', 'recent-send', 'generated-attempt'])
+    assert.equal(variables.gymId, 'gym'); assert.equal(variables.userId, 'user')
+    return { climbUsers: [updated] }
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  assert.deepEqual(await client.unsend('gym', 'user', 'route'), updated)
+  assert.equal(pages, 2); assert.equal(deletes, 1)
+})
+
+test('Unsend never deletes another route’s logs or retries an uncertain delete', async () => {
+  let deletes = 0, wrongRoute = true
+  const client = new TopLoggerClient(async query => {
+    if (query === REFRESH) return { tokens: tokens() }
+    if (query === ROUTE_LOGS) return { climbLogs: { data: [{ id: 'log', gymId: 'gym', climbId: wrongRoute ? 'other' : 'route', valid: true, topped: true, autoAdded: false }], pagination: { total: 1, page: 1, perPage: 100 } } }
+    assert.equal(query, UNSEND); deletes++; throw new ApiError('network', 'timeout')
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  await assert.rejects(client.unsend('gym', 'user', 'route'), /Could not verify/)
+  assert.equal(deletes, 0)
+  wrongRoute = false
+  await assert.rejects(client.unsend('gym', 'user', 'route'), /Check TopLogger/)
+  assert.equal(deletes, 1)
+})
+
+test('History refresh reuses complete older days, replaces recent logs, and discovers added/deleted days', async () => {
+  const day = (daysAgo: number) => new Date(Date.now() - daysAgo * 86400000).toISOString()
+  const old = day(30), recent = day(1), added = day(60), removed = day(40), empty = day(50)
+  const dates = [old, recent, empty]
+  const calls: string[] = []
+  let revision = 1
+  const client = new TopLoggerClient(async (query, variables) => {
+    if (query === REFRESH) return { tokens: tokens() }
+    if (query === DAYS) return { climbDaysPaginated: { data: dates.map(statsAtDate => ({ gymId: 'gym', statsAtDate })), pagination: { total: dates.length, page: 1, perPage: 100 } } }
+    assert.equal(query, HISTORY)
+    const date = variables.date as string
+    calls.push(date)
+    const logs = date === empty ? [] : [log(`revision-${revision}`, 1, date)]
+    return { climbLogs: { data: logs, pagination: { total: logs.length, page: 1, perPage: 100 } } }
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  const first = await client.history('gym', 'user')
+  assert.equal(calls.length, 3)
+  dates.push(added); revision = 2; calls.length = 0
+  first.sessions.push({ date: removed, at: new Date().toISOString(), logs: [log('deleted', 1, removed)] })
+  const second = await client.history('gym', 'user', first)
+  assert.deepEqual(calls.sort(), [recent, added].sort())
+  assert.equal(second.sessions.find(session => session.date === old)?.logs[0]?.climbId, 'revision-1')
+  assert.equal(second.sessions.find(session => session.date === recent)?.logs[0]?.climbId, 'revision-2')
+  assert.equal(second.sessions.find(session => session.date === recent)?.logs.length, 1)
+  assert.deepEqual(second.sessions.find(session => session.date === empty)?.logs, [])
+  assert(!second.sessions.some(session => session.date === removed))
+  assert.equal(second.sessions.find(session => session.date === old)?.at, first.sessions.find(session => session.date === old)?.at)
+
+  // Expiry is per session: repeated refreshes must not keep old logs fresh forever.
+  second.sessions.find(session => session.date === old)!.at = day(8)
+  calls.length = 0
+  const third = await client.history('gym', 'user', second)
+  assert.deepEqual(calls.sort(), [old, recent].sort())
+  assert.equal(third.sessions.find(session => session.date === old)?.logs[0]?.climbId, 'revision-2')
+})
+
+test('History refresh replaces deleted ascents and leaves cached days intact when a request fails', async () => {
+  const date = new Date(Date.now() - 86400000).toISOString()
+  const cached = { sessions: [{ date, at: new Date().toISOString(), logs: [log('deleted', 1, date)] }] }
+  const before = JSON.stringify(cached)
+  let fail = false
+  const client = new TopLoggerClient(async query => {
+    if (query === REFRESH) return { tokens: tokens() }
+    if (query === DAYS) return { climbDaysPaginated: { data: [{ gymId: 'gym', statsAtDate: date }], pagination: { total: 1, page: 1, perPage: 100 } } }
+    if (fail) throw new ApiError('network', 'offline')
+    return { climbLogs: { data: [], pagination: { total: 0, page: 1, perPage: 100 } } }
+  }, undefined, false)
+  await client.connect('header.payload.signature')
+  assert.deepEqual((await client.history('gym', 'user', cached)).sessions[0]?.logs, [])
+  fail = true
+  await assert.rejects(client.history('gym', 'user', cached), (error: ApiError) => error.kind === 'network')
+  assert.equal(JSON.stringify(cached), before)
 })
 
 test('French grades, bonuses, empty averages and untrusted color values', () => {
