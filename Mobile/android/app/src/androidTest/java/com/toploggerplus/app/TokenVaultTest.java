@@ -20,6 +20,15 @@ public class TokenVaultTest {
         assertFalse(TopLoggerLoginActivity.officialUrl("https://app.toplogger.nu:8443/"));
         assertFalse(TopLoggerLoginActivity.officialUrl(null));
     }
+    @Test public void updatesOnlyComeFromProjectReleases() {
+        assertTrue(AppUpdaterPlugin.releaseUrl("https://github.com/CedricBaetens/TopLoggerPlus/releases/download/v3.2.1/TopLoggerPlus-3.2.1.apk"));
+        assertFalse(AppUpdaterPlugin.releaseUrl("http://github.com/CedricBaetens/TopLoggerPlus/releases/download/v3.2.1/TopLoggerPlus-3.2.1.apk"));
+        assertFalse(AppUpdaterPlugin.releaseUrl("https://github.com.evil.example/CedricBaetens/TopLoggerPlus/releases/download/v3.2.1/x.apk"));
+        assertFalse(AppUpdaterPlugin.releaseUrl("https://github.com/someone/TopLoggerPlus/releases/download/v3.2.1/x.apk"));
+        assertFalse(AppUpdaterPlugin.releaseUrl("https://github.com/CedricBaetens/TopLoggerPlus/releases/download/../../../other/x.apk"));
+        assertFalse(AppUpdaterPlugin.releaseUrl("https://github.com/CedricBaetens/TopLoggerPlus/releases/download/v3.2.1/notes.txt"));
+        assertFalse(AppUpdaterPlugin.releaseUrl(null));
+    }
     @Test public void loginCapturesOfficialSession() throws Exception {
         android.app.Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Context context = instrumentation.getTargetContext();

@@ -25,10 +25,11 @@ try {
   await context.addInitScript(() => {
     window.androidBridge = {}
     window.Capacitor = {
-      PluginHeaders: Object.entries({ TopLoggerLogin: ['open'], TokenVault: ['read', 'write', 'clear'], App: ['addListener', 'removeListener', 'getInfo'], CapacitorHttp: ['post'] }).map(([name, methods]) => ({ name, methods: methods.map(name => ({ name, rtype: 'promise' })) })),
+      PluginHeaders: Object.entries({ TopLoggerLogin: ['open'], TokenVault: ['read', 'write', 'clear'], App: ['addListener', 'removeListener', 'getInfo'], AppUpdater: ['install', 'addListener', 'removeListener'], CapacitorHttp: ['post'] }).map(([name, methods]) => ({ name, methods: methods.map(name => ({ name, rtype: 'promise' })) })),
       nativePromise: async (plugin, method, options) => {
         if (plugin === 'TopLoggerLogin') return { refreshToken: 'test.refresh.signature' }
         if (plugin === 'App' && method === 'getInfo') return { version: '3.0.0' }
+        if (plugin === 'AppUpdater' && method === 'install') { (window.installed ??= []).push(options.url); if (window.failInstall) throw new Error('The update could not be downloaded. Check your connection and try again.'); return {} }
         if (plugin === 'CapacitorHttp') {
           const response = await fetch(options.url, { method: 'POST', headers: options.headers, body: JSON.stringify(options.data) })
           return { status: response.status, data: await response.json() }
@@ -234,7 +235,13 @@ try {
   await page.getByText('Version 3.2.0 is available.').waitFor(); await page.getByText('· Version 3.2.0 available').waitFor()
   await page.getByRole('button', { name: 'Download update' }).click()
   await page.getByRole('button', { name: 'Download', exact: true }).click()
-  await page.waitForTimeout(200); assert.deepEqual(opened, [apkUrl('v3.2.0'), apkUrl('v3.2.0')])
+  assert.deepEqual(await page.evaluate(() => window.installed), [apkUrl('v3.2.0'), apkUrl('v3.2.0')])
+  await page.evaluate(() => { window.failInstall = true }); await page.getByRole('button', { name: 'Download', exact: true }).click()
+  await page.getByText('The update could not be downloaded.', { exact: false }).waitFor()
+  await page.getByRole('button', { name: 'Open in browser' }).click()
+  await page.waitForTimeout(200); assert.deepEqual(opened, [apkUrl('v3.2.0')])
+  await page.evaluate(() => { window.failInstall = false }); await page.getByRole('button', { name: 'Retry', exact: true }).click()
+  await page.getByText('Version 3.2.0 is available.').waitFor()
   await screenshot('10-update.png')
   await page.getByRole('button', { name: 'Later', exact: true }).click(); assert.equal(await page.getByText('Version 3.2.0 is available.').count(), 0)
   await page.reload(); await page.getByText('Version 3.2.0 is available.').waitFor(); assert.equal(githubReads, 4, 'Restart uses the saved answer')

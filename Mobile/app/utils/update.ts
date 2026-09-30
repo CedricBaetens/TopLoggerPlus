@@ -1,3 +1,5 @@
+import { registerPlugin, type PluginListenerHandle } from '@capacitor/core'
+
 export const LATEST_RELEASE = 'https://api.github.com/repos/CedricBaetens/TopLoggerPlus/releases/latest'
 export type Update = { version: string, url: string }
 type Release = { tag_name?: unknown, html_url?: unknown, draft?: unknown, prerelease?: unknown, assets?: { name?: unknown, browser_download_url?: unknown }[] }
@@ -44,4 +46,14 @@ export async function checkForUpdate(current: string, { force = false, load = fe
   const release = { tag_name, html_url, draft, prerelease, assets: assets?.map(({ name, browser_download_url }) => ({ name, browser_download_url })) }
   storage.setItem(CHECKED, JSON.stringify({ at: now, release }))
   return releaseUpdate(release, current)
+}
+
+type Updater = { install(options: { url: string }): Promise<void>, addListener(event: 'progress', listener: (progress: { percent: number }) => void): Promise<PluginListenerHandle> }
+const updater = registerPlugin<Updater>('AppUpdater')
+
+/** Downloads the APK inside the app and opens Android's installer; percent is -1 while the size is unknown. */
+export async function installUpdate(update: Update, progress: (percent: number) => void): Promise<void> {
+  const listener = await updater.addListener('progress', ({ percent }) => progress(percent))
+  try { await updater.install({ url: update.url }) }
+  finally { await listener.remove() }
 }

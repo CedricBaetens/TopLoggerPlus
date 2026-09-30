@@ -7,6 +7,7 @@ public class MainActivity extends BridgeActivity {
     @Override public void onCreate(Bundle savedInstanceState) {
         registerPlugin(TokenVaultPlugin.class);
         registerPlugin(TopLoggerLoginPlugin.class);
+        registerPlugin(AppUpdaterPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
