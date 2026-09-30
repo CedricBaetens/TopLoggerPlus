@@ -25,11 +25,10 @@ try {
   await context.addInitScript(() => {
     window.androidBridge = {}
     window.Capacitor = {
-      PluginHeaders: Object.entries({ TopLoggerLogin: ['open'], TokenVault: ['read', 'write', 'clear'], App: ['addListener', 'removeListener', 'getInfo'], Browser: ['open'], CapacitorHttp: ['post'] }).map(([name, methods]) => ({ name, methods: methods.map(name => ({ name, rtype: 'promise' })) })),
+      PluginHeaders: Object.entries({ TopLoggerLogin: ['open'], TokenVault: ['read', 'write', 'clear'], App: ['addListener', 'removeListener', 'getInfo'], CapacitorHttp: ['post'] }).map(([name, methods]) => ({ name, methods: methods.map(name => ({ name, rtype: 'promise' })) })),
       nativePromise: async (plugin, method, options) => {
         if (plugin === 'TopLoggerLogin') return { refreshToken: 'test.refresh.signature' }
         if (plugin === 'App' && method === 'getInfo') return { version: '3.0.0' }
-        if (plugin === 'Browser') { (window.opened ??= []).push(options.url); return {} }
         if (plugin === 'CapacitorHttp') {
           const response = await fetch(options.url, { method: 'POST', headers: options.headers, body: JSON.stringify(options.data) })
           return { status: response.status, data: await response.json() }
@@ -93,6 +92,9 @@ try {
   })
   // GitHub release fixture: no update until the update checks below publish a newer version.
   let latest = 'v3.0.0', githubOffline = false, githubReads = 0
+  const opened = []
+  // On Android, Capacitor hands github.com links to the browser app; 204 keeps the test page in place.
+  await page.route('https://github.com/**', async request => { opened.push(request.request().url()); await request.fulfill({ status: 204 }) })
   const apkUrl = tag => `https://github.com/CedricBaetens/TopLoggerPlus/releases/download/${tag}/TopLoggerPlus-${tag.slice(1)}.apk`
   await page.route('https://api.github.com/**', async request => {
     githubReads++
@@ -232,7 +234,7 @@ try {
   await page.getByText('Version 3.2.0 is available.').waitFor(); await page.getByText('· Version 3.2.0 available').waitFor()
   await page.getByRole('button', { name: 'Download update' }).click()
   await page.getByRole('button', { name: 'Download', exact: true }).click()
-  assert.deepEqual(await page.evaluate(() => window.opened), [apkUrl('v3.2.0'), apkUrl('v3.2.0')])
+  await page.waitForTimeout(200); assert.deepEqual(opened, [apkUrl('v3.2.0'), apkUrl('v3.2.0')])
   await screenshot('10-update.png')
   await page.getByRole('button', { name: 'Later', exact: true }).click(); assert.equal(await page.getByText('Version 3.2.0 is available.').count(), 0)
   await page.reload(); await page.getByText('Version 3.2.0 is available.').waitFor(); assert.equal(githubReads, 4, 'Restart uses the saved answer')

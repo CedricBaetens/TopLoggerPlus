@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
-import { Browser } from '@capacitor/browser'
 import { loginToken } from './utils/login'
 import { checkForUpdate, type Update } from './utils/update'
 import { ascentLabel, averageLabel, dateLabel, defaultWallSelection, frenchGrade, gradeChoices, isActive, score } from './utils/domain'
@@ -63,7 +62,8 @@ async function checkUpdates(force = false) {
   try { update.value = await checkForUpdate(appVersion.value, { force }); if (force) updateStatus.value = update.value ? '' : 'current' }
   catch { if (force) updateStatus.value = 'failed' }
 }
-function downloadUpdate() { if (update.value) void Browser.open({ url: update.value.url }) }
+// Leaving the app's origin makes Capacitor hand the link to the default browser app; Chrome Custom Tabs can stall on APK downloads.
+function downloadUpdate() { if (update.value) window.location.href = update.value.url }
 function resetFilters() { grade.value = ''; allWalls(); color.value = ''; status.value = ''; search.value = '' }
 async function changeTab(tab: typeof state.tab) { closeRoute(); await selectTab(tab); window.scrollTo({ top: 0 }) }
 function showRoute(route: Parameters<typeof openRoute>[0]) {
