@@ -1,15 +1,20 @@
-**/bin
-**/obj
-**/packages
-**/*.suo
-
-.vs/
 .idea/
-Release/
-.kube*
-TestResult.xml
-*.user
 *.keystore
+*.jks
+Mobile/signing/
 
-.terraform
-*.tfvars
+# Nuxt / Capacitor
+Mobile/node_modules/
+Mobile/.nuxt/
+Mobile/.output/
+Mobile/artifacts/
+Mobile/android/.gradle/
+Mobile/android/**/build/
+Mobile/android/local.properties
+Mobile/android/app/src/main/assets/public/
+Mobile/android/app/src/main/assets/capacitor.config.json
+Mobile/android/app/src/main/assets/capacitor.plugins.json
+
+# Extra CA certificates (e.g. corporate TLS proxy) - local only
+.devcontainer/certs/*.crt
+.cache/
