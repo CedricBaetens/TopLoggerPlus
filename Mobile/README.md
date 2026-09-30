@@ -25,11 +25,15 @@ docker run --rm -v "$PWD":/workspaces/TopLoggerPlus \
 
 Drop the `--debug` flag for a signed release build. Behind a TLS-inspecting proxy, copy its CA certificate into `.devcontainer/certs/*.crt` (ignored by git) before building the image. Gradle and npm caches are kept in the git-ignored `.cache/` folder at the repository root; Claude Code (devcontainer feature) keeps its login and sessions in `.cache/claude`, separate from the host's `~/.claude`; run `/login` once inside the container. Git ignores the host's config and VS Code's credential relay inside the devcontainer: identity lives in `.cache/git/config` and GitHub auth in `.cache/gh` (`gh auth login`, then `git config --global user.name/user.email`). The only state outside the repository is the Docker image (`docker rmi toploggerplus-dev && docker builder prune`).
 
-Personal release signing files are included in `Mobile/signing/` and used automatically. Keep this repository private: the key and password allow signing app updates. Signing JSON contains `keystore` (absolute or relative to the JSON file), `password`, and `alias`. Override with `-SigningFile`, or set `TLP_KEYSTORE`, `TLP_STORE_PASSWORD`, `TLP_KEY_ALIAS`, and optional `TLP_KEY_PASSWORD`. The build script rejects unsigned release builds.
+Release signing files live in `Mobile/signing/` (git-ignored, not in the repository) and are used automatically when present. Signing JSON contains `keystore` (absolute or relative to the JSON file), `password`, and `alias`. Override with `-SigningFile`, or set `TLP_KEYSTORE`, `TLP_STORE_PASSWORD`, `TLP_KEY_ALIAS`, and optional `TLP_KEY_PASSWORD`. The build script rejects unsigned release builds.
 
 Output: `android/app/build/outputs/apk/release/app-release.apk`. Android 7+ (API 24), application ID `com.toploggerplus.app`. Debug builds use `com.toploggerplus.app.qa` so native tests cannot touch release credentials.
 
-On this workstation, tools are under `C:/Users/Cedric/.codex/android-tools`; the personal signing key and JSON are included in `Mobile/signing/`, with an additional copy under `C:/Users/Cedric/.codex/toplogger-plus-signing`. No existing keystore was available in the checkout. **Back up the signing directory privately**: future updates need the same key.
+On this workstation, tools are under `C:/Users/Cedric/.codex/android-tools`; the personal signing key and JSON are in `Mobile/signing/`, with an additional copy under `C:/Users/Cedric/.codex/toplogger-plus-signing`. **Back up the signing directory privately**: future updates need the same key.
+
+### Releases
+
+Push a tag such as `v3.1.0` (normally on `master`) to run `.github/workflows/release.yml`. It builds a signed APK and publishes it as a GitHub Release. The tag sets `versionName` (`3.1.0`) and `versionCode` (`major*10000 + minor*100 + patch`, so minor and patch stay below 100); the versions in `build.gradle` and `package.json` are only fallbacks for local builds. The workflow needs repository secrets `TLP_KEYSTORE_BASE64` (`base64 -w0 signing/toplogger-plus-release.jks`), `TLP_STORE_PASSWORD` and `TLP_KEY_ALIAS`.
 
 ## Connect TopLogger
 
@@ -141,7 +145,7 @@ Adventure rewards new sends confirmed through Plus: Redpoint 100 XP, Flash 125 X
 
 Progress is stored per account across gyms on this device. Offline cache clears and sign-outs preserve it; Adventure offers a confirmed reset. No server sync or backup is provided.
 
-A new release signing key was generated on this workstation on 2026-09-29. The build script uses the included signing files by default, with `JAVA_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/jdk-21.0.12.1+1`, and `ANDROID_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/sdk`. This key cannot update installations signed with the previous key. Keep a private backup of the signing directory.
+The release signing key was rotated on 2026-09-30 because the previous one had been committed to the public repository. The build script uses the local signing files by default, with `JAVA_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/jdk-21.0.12.1+1`, and `ANDROID_HOME` pointing to `C:/Users/Cedric/.codex/android-tools/sdk`. This key cannot update installations signed with the previous key. Keep a private backup of the signing directory.
 
 ### Tailwind styling
 

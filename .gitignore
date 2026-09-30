@@ -1,7 +1,7 @@
 .idea/
 *.keystore
 *.jks
-!Mobile/signing/toplogger-plus-release.jks
+Mobile/signing/
 
 # Nuxt / Capacitor
 Mobile/node_modules/

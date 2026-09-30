@@ -1,0 +1,61 @@
+# Push a tag like v3.1.0 on master to build a signed APK and publish it as a GitHub Release.
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || { echo "Tag must look like v1.2.3, got $GITHUB_REF_NAME" >&2; exit 1; }
+          major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]} patch=${BASH_REMATCH[3]}
+          (( minor < 100 && patch < 100 )) || { echo 'Minor and patch must be below 100.' >&2; exit 1; }
+          echo "TLP_VERSION_NAME=$version" >> "$GITHUB_ENV"
+          echo "TLP_VERSION_CODE=$(( major * 10000 + minor * 100 + patch ))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Install Android SDK packages
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+
+      - name: Restore signing key
+        env:
+          TLP_KEYSTORE_BASE64: ${{ secrets.TLP_KEYSTORE_BASE64 }}
+        run: |
+          [[ -n "$TLP_KEYSTORE_BASE64" ]] || { echo 'Secret TLP_KEYSTORE_BASE64 is not set.' >&2; exit 1; }
+          echo "$TLP_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "TLP_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed APK
+        env:
+          TLP_STORE_PASSWORD: ${{ secrets.TLP_STORE_PASSWORD }}
+          TLP_KEY_ALIAS: ${{ secrets.TLP_KEY_ALIAS }}
+        run: Mobile/scripts/build-android.sh
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk="TopLoggerPlus-$TLP_VERSION_NAME.apk"
+          mv Mobile/android/app/build/outputs/apk/release/app-release.apk "$apk"
+          gh release create "$GITHUB_REF_NAME" "$apk" --title "TopLogger Plus $TLP_VERSION_NAME" --generate-notes
