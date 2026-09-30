@@ -33,7 +33,7 @@ On this workstation, tools are under `C:/Users/Cedric/.codex/android-tools`; the
 
 ### Releases
 
-Push a tag such as `v3.1.0` (normally on `master`) to run `.github/workflows/release.yml`. It builds a signed APK and publishes it as a GitHub Release. The tag sets `versionName` (`3.1.0`) and `versionCode` (`major*10000 + minor*100 + patch`, so minor and patch stay below 100); the versions in `build.gradle` and `package.json` are only fallbacks for local builds. The workflow needs repository secrets `TLP_KEYSTORE_BASE64` (`base64 -w0 signing/toplogger-plus-release.jks`), `TLP_STORE_PASSWORD` and `TLP_KEY_ALIAS`.
+In GitHub, open *Actions → Release → Run workflow* on `master` and enter a new version such as `v3.1.1`, or push that tag yourself; both run `.github/workflows/release.yml`. It builds a signed APK and publishes it as a GitHub Release. The tag sets `versionName` (`3.1.0`) and `versionCode` (`major*10000 + minor*100 + patch`, so minor and patch stay below 100); the versions in `build.gradle` and `package.json` are only fallbacks for local builds. The workflow needs repository secrets `TLP_KEYSTORE_BASE64` (`base64 -w0 signing/toplogger-plus-release.jks`), `TLP_STORE_PASSWORD` and `TLP_KEY_ALIAS`.
 
 ## Connect TopLogger
 

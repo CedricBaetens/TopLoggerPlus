@@ -1,9 +1,16 @@
-# Push a tag like v3.1.0 on master to build a signed APK and publish it as a GitHub Release.
+# Builds a signed APK and publishes it as a GitHub Release. Either push a tag like v3.1.0, or use
+# "Run workflow" on master with a version: the tag is then created on that commit when the release is published.
 name: Release
 
 on:
   push:
     tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. v3.1.1'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -14,12 +21,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Derive version from tag
+      - name: Derive version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || { echo "Tag must look like v1.2.3, got $GITHUB_REF_NAME" >&2; exit 1; }
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            [[ "$GITHUB_REF" == refs/heads/master ]] || { echo "Run this workflow from master, not $GITHUB_REF_NAME." >&2; exit 1; }
+            tag="v${INPUT_VERSION#v}"
+            [[ -z "$(git ls-remote --tags origin "refs/tags/$tag")" ]] || { echo "Tag $tag already exists; pick a new version." >&2; exit 1; }
+          else
+            tag="$GITHUB_REF_NAME"
+          fi
+          version="${tag#v}"
+          [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || { echo "Version must look like v1.2.3, got $tag" >&2; exit 1; }
           major=${BASH_REMATCH[1]} minor=${BASH_REMATCH[2]} patch=${BASH_REMATCH[3]}
           (( minor < 100 && patch < 100 )) || { echo 'Minor and patch must be below 100.' >&2; exit 1; }
+          echo "TLP_TAG=$tag" >> "$GITHUB_ENV"
           echo "TLP_VERSION_NAME=$version" >> "$GITHUB_ENV"
           echo "TLP_VERSION_CODE=$(( major * 10000 + minor * 100 + patch ))" >> "$GITHUB_ENV"
 
@@ -61,4 +78,4 @@ jobs:
         run: |
           apk="TopLoggerPlus-$TLP_VERSION_NAME.apk"
           mv Mobile/android/app/build/outputs/apk/release/app-release.apk "$apk"
-          gh release create "$GITHUB_REF_NAME" "$apk" --title "TopLogger Plus $TLP_VERSION_NAME" --generate-notes
+          gh release create "$TLP_TAG" "$apk" --target "$GITHUB_SHA" --title "TopLogger Plus $TLP_VERSION_NAME" --generate-notes
