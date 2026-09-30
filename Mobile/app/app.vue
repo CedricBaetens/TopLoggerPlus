@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { Capacitor } from '@capacitor/core'
 import { App } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { loginToken } from './utils/login'
+import { checkForUpdate, type Update } from './utils/update'
 import { ascentLabel, averageLabel, dateLabel, defaultWallSelection, frenchGrade, gradeChoices, isActive, score } from './utils/domain'
 
 const { adventureProgress, resetAdventure, state, gyms, activeRoutes, ranked, initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, submitAscent, submitGrade, logout, clearSaved } = useTopLogger()
 const showFilters = ref(false), search = ref('')
 const signingIn = ref(false)
 const appVersion = ref('3.0.0')
+const update = ref<Update | null>(null), updateStatus = ref<'' | 'checking' | 'current' | 'failed'>('')
 const grade = ref(''), selectedWalls = ref<string[]>([]), color = ref(''), status = ref('')
 const wallsChanged = ref(false)
 const root = ref<HTMLElement | null>(null), detailHeading = ref<HTMLElement | null>(null)
@@ -55,6 +58,12 @@ async function signIn() {
   catch (error) { state.error = error instanceof Error ? error.message : 'Sign-in could not be completed. Please try again.' }
   finally { signingIn.value = false }
 }
+async function checkUpdates(force = false) {
+  if (force) updateStatus.value = 'checking'
+  try { update.value = await checkForUpdate(appVersion.value, { force }); if (force) updateStatus.value = update.value ? '' : 'current' }
+  catch { if (force) updateStatus.value = 'failed' }
+}
+function downloadUpdate() { if (update.value) void Browser.open({ url: update.value.url }) }
 function resetFilters() { grade.value = ''; allWalls(); color.value = ''; status.value = ''; search.value = '' }
 async function changeTab(tab: typeof state.tab) { closeRoute(); await selectTab(tab); window.scrollTo({ top: 0 }) }
 function showRoute(route: Parameters<typeof openRoute>[0]) {
@@ -76,7 +85,7 @@ let backHandle: Awaited<ReturnType<typeof App.addListener>> | undefined
 const popState = () => closeRoute()
 onMounted(async () => {
   window.addEventListener('popstate', popState)
-  if (Capacitor.isNativePlatform()) { backHandle = await App.addListener('backButton', back); appVersion.value = (await App.getInfo()).version }
+  if (Capacitor.isNativePlatform()) { backHandle = await App.addListener('backButton', back); appVersion.value = (await App.getInfo()).version; void checkUpdates() }
   await initialize()
   document.documentElement.dataset.theme = state.theme
 })
@@ -95,6 +104,7 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
     <main class="max-w-195 mx-auto [padding:12px_16px_calc(82px_+_env(safe-area-inset-bottom))] max-[420px]:[padding:10px_12px_calc(82px_+_env(safe-area-inset-bottom))] [&.login-main]:max-w-125 [&.login-main]:pt-6" id="main" :class="{ 'login-main': !state.user }">
       <div v-if="state.user" role="status" aria-live="polite" aria-atomic="true"><p v-if="state.adventureMessage" class="notice flex items-center justify-between flex-wrap gap-2.5 p-3 mb-3 bg-soft [border-left:3px_solid_var(--accent)] text-[.8rem] [&.error]:text-error [&.error]:bg-error-bg [&.error]:border-l-error [&_button]:px-3 [&_button]:py-2 [&_button]:border [&_button]:border-solid [&_button]:border-[currentColor] [&_button]:rounded-[3px] [&_button]:text-inherit [&_button]:bg-transparent">{{ state.adventureMessage }}</p></div>
       <p v-if="state.user && state.adventureWarning" class="notice error flex items-center justify-between flex-wrap gap-2.5 p-3 mb-3 bg-soft [border-left:3px_solid_var(--accent)] text-[.8rem] [&.error]:text-error [&.error]:bg-error-bg [&.error]:border-l-error [&_button]:px-3 [&_button]:py-2 [&_button]:border [&_button]:border-solid [&_button]:border-[currentColor] [&_button]:rounded-[3px] [&_button]:text-inherit [&_button]:bg-transparent" role="alert">{{ state.adventureWarning }}</p>
+      <div v-if="update" class="notice flex items-center justify-between flex-wrap gap-2.5 p-3 mb-3 bg-soft [border-left:3px_solid_var(--accent)] text-[.8rem] [&.error]:text-error [&.error]:bg-error-bg [&.error]:border-l-error [&_button]:px-3 [&_button]:py-2 [&_button]:border [&_button]:border-solid [&_button]:border-[currentColor] [&_button]:rounded-[3px] [&_button]:text-inherit [&_button]:bg-transparent" role="status">Version {{ update.version }} is available.<span class="flex gap-2"><button @click="downloadUpdate">Download</button><button @click="update = null">Later</button></span></div>
       <div v-if="!state.initialized" class="empty-state [padding:32px_8px] text-center text-muted [&>svg]:w-6 [&>svg]:h-6 [&>svg]:mb-3 [&_h1]:text-[.95rem] [&_h1]:text-ink [&_h1]:mb-2 [&_h2]:text-[.95rem] [&_h2]:text-ink [&_h2]:mb-2 [&_p]:max-w-82.5 [&_p]:[margin:0_auto_12px] [&_p]:text-[.8rem]" role="status"><span class="spinner inline-block w-4.5 h-4.5 [border:2px_solid_var(--line)] border-t-accent rounded-full shrink-0 animate-spin" /><h1>Getting things ready</h1><p>Opening your saved connection.</p></div>
       <section v-else-if="!state.user" class="onboarding [&_h1]:text-[1.25rem] [&_h1]:mb-4.5">
         <h1>Connect TopLogger</h1>
@@ -164,7 +174,7 @@ onBeforeUnmount(() => { window.removeEventListener('popstate', popState); void b
           <div v-if="state.needsLogin" class="detail-panel p-3.5 mt-2.5 border border-solid border-line rounded-[7px] bg-panel [&>h2]:mb-3 [&>p]:mb-3 [&>p]:text-[.8rem]"><h2>Reconnect TopLogger</h2><button v-if="Capacitor.isNativePlatform()" class="primary full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[4px] text-[.82rem] font-semibold border border-solid border-[#8d61ef] [background:linear-gradient(180deg,_var(--button-top),_var(--button-bottom))] text-accent-text [box-shadow:inset_0_1px_0_#ffffff20] w-full" :disabled="signingIn || state.busy" @click="signIn">{{ signingIn ? 'Waiting for TopLogger…' : 'Sign in with TopLogger' }}</button><p v-else class="muted text-muted">Sign in using the Android app.</p></div>
           <div class="detail-panel p-3.5 mt-2.5 border border-solid border-line rounded-[7px] bg-panel [&>h2]:mb-3 [&>p]:mb-3 [&>p]:text-[.8rem]"><h2>Appearance</h2><div class="segmented flex gap-1 p-0.75 border border-solid border-line rounded-[7px] bg-bg mb-3 [&_button]:flex [&_button]:items-center [&_button]:justify-center [&_button]:gap-1.5 [&_button]:flex-1 [&_button]:min-w-0 [&_button]:px-1 [&_button]:py-2 [&_button]:border-0 [&_button]:[border-bottom:2px_solid_transparent] [&_button]:bg-transparent [&_button]:text-muted [&_button]:text-[.78rem] [&_button]:rounded-[4px] [&_button[aria-pressed=true]]:border-b-accent [&_button[aria-pressed=true]]:bg-soft [&_button[aria-pressed=true]]:text-ink [&_button[aria-pressed=true]]:font-[650] [&.period]:mb-[0]"><button v-for="theme in (['system', 'light', 'dark'] as const)" :key="theme" :aria-pressed="state.theme === theme" @click="state.theme = theme">{{ theme[0]!.toUpperCase() + theme.slice(1) }}</button></div></div>
           <div class="detail-panel p-3.5 mt-2.5 border border-solid border-line rounded-[7px] bg-panel [&>h2]:mb-3 [&>p]:mb-3 [&>p]:text-[.8rem]"><h2>Saved data</h2><p class="muted text-muted">Clear offline data. Keep your login and adventure progress.</p><button class="secondary full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[4px] text-[.82rem] font-semibold border border-solid border-line bg-surface w-full" :disabled="state.busy || state.ascentBusy" @click="clearSaved">Clear saved data</button></div>
-          <button class="danger full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[4px] text-[.82rem] font-semibold border border-solid border-line text-error bg-surface mt-4 w-full" :disabled="state.ascentBusy" @click="logout">Sign out and clear offline data</button><p class="muted text-muted">Adventure progress stays on this device after signing out.</p><p class="account-footer mt-5 text-center text-muted text-[.68rem]">TopLogger Plus {{ appVersion }}</p>
+          <button class="danger full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-[4px] text-[.82rem] font-semibold border border-solid border-line text-error bg-surface mt-4 w-full" :disabled="state.ascentBusy" @click="logout">Sign out and clear offline data</button><p class="muted text-muted">Adventure progress stays on this device after signing out.</p><p class="account-footer mt-5 text-center text-muted text-[.68rem]">TopLogger Plus {{ appVersion }}<span v-if="update" role="status"> · Version {{ update.version }} available</span><span v-else-if="updateStatus === 'current'" role="status"> · Up to date</span><span v-else-if="updateStatus === 'failed'" role="status"> · Could not reach GitHub</span></p><button v-if="update" class="block min-h-12 mx-auto px-3 border-0 bg-transparent text-accent text-[.75rem] underline" @click="downloadUpdate">Download update</button><button v-else-if="Capacitor.isNativePlatform()" class="block min-h-12 mx-auto px-3 border-0 bg-transparent text-accent text-[.75rem] underline" :disabled="updateStatus === 'checking'" @click="checkUpdates(true)">{{ updateStatus === 'checking' ? 'Checking…' : 'Check for updates' }}</button>
         </section>
 
         <section v-else>

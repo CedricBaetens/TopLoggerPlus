@@ -2,6 +2,7 @@
 *.keystore
 *.jks
 Mobile/signing/
+temp/
 
 # Nuxt / Capacitor
 Mobile/node_modules/

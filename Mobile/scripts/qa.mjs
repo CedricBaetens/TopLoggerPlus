@@ -25,10 +25,11 @@ try {
   await context.addInitScript(() => {
     window.androidBridge = {}
     window.Capacitor = {
-      PluginHeaders: Object.entries({ TopLoggerLogin: ['open'], TokenVault: ['read', 'write', 'clear'], App: ['addListener', 'removeListener', 'getInfo'], CapacitorHttp: ['post'] }).map(([name, methods]) => ({ name, methods: methods.map(name => ({ name, rtype: 'promise' })) })),
+      PluginHeaders: Object.entries({ TopLoggerLogin: ['open'], TokenVault: ['read', 'write', 'clear'], App: ['addListener', 'removeListener', 'getInfo'], Browser: ['open'], CapacitorHttp: ['post'] }).map(([name, methods]) => ({ name, methods: methods.map(name => ({ name, rtype: 'promise' })) })),
       nativePromise: async (plugin, method, options) => {
         if (plugin === 'TopLoggerLogin') return { refreshToken: 'test.refresh.signature' }
         if (plugin === 'App' && method === 'getInfo') return { version: '3.0.0' }
+        if (plugin === 'Browser') { (window.opened ??= []).push(options.url); return {} }
         if (plugin === 'CapacitorHttp') {
           const response = await fetch(options.url, { method: 'POST', headers: options.headers, body: JSON.stringify(options.data) })
           return { status: response.status, data: await response.json() }
@@ -89,6 +90,14 @@ try {
     else if (query.includes('PlusToppers')) { topperReads++; data = { climbUsers: { data: [{ id: 'topper', user: { id: 'other', fullName: 'Test Climber Two' }, tickType: 1, grade: 617 }], pagination: { total: 1, page: 1, perPage: 200 } } } }
     else throw new Error('Unhandled test operation')
     await request.fulfill({ json: { data } })
+  })
+  // GitHub release fixture: no update until the update checks below publish a newer version.
+  let latest = 'v3.0.0', githubOffline = false, githubReads = 0
+  const apkUrl = tag => `https://github.com/CedricBaetens/TopLoggerPlus/releases/download/${tag}/TopLoggerPlus-${tag.slice(1)}.apk`
+  await page.route('https://api.github.com/**', async request => {
+    githubReads++
+    if (githubOffline) { await request.abort(); return }
+    await request.fulfill({ json: { tag_name: latest, html_url: `https://github.com/CedricBaetens/TopLoggerPlus/releases/tag/${latest}`, draft: false, prerelease: false, assets: [{ name: `TopLoggerPlus-${latest.slice(1)}.apk`, browser_download_url: apkUrl(latest) }] } })
   })
   const screenshot = name => page.screenshot({ path: resolve(output, name), fullPage: true })
   await page.goto(`http://127.0.0.1:${server.address().port}`)
@@ -216,10 +225,22 @@ try {
   await page.getByRole('heading', { name: 'Level 1', exact: true }).waitFor()
   assert.equal(await page.locator('.achievement-list .topped').count(), 0)
   await page.getByRole('button', { name: 'Account', exact: true }).click()
+  assert.equal(githubReads, 1, 'Startup checks reuse the last answer for six hours')
+  await page.getByRole('button', { name: 'Check for updates' }).click(); await page.getByText('· Up to date').waitFor()
+  githubOffline = true; await page.getByRole('button', { name: 'Check for updates' }).click(); await page.getByText('· Could not reach GitHub').waitFor()
+  githubOffline = false; latest = 'v3.2.0'; await page.getByRole('button', { name: 'Check for updates' }).click()
+  await page.getByText('Version 3.2.0 is available.').waitFor(); await page.getByText('· Version 3.2.0 available').waitFor()
+  await page.getByRole('button', { name: 'Download update' }).click()
+  await page.getByRole('button', { name: 'Download', exact: true }).click()
+  assert.deepEqual(await page.evaluate(() => window.opened), [apkUrl('v3.2.0'), apkUrl('v3.2.0')])
+  await screenshot('10-update.png')
+  await page.getByRole('button', { name: 'Later', exact: true }).click(); assert.equal(await page.getByText('Version 3.2.0 is available.').count(), 0)
+  await page.reload(); await page.getByText('Version 3.2.0 is available.').waitFor(); assert.equal(githubReads, 4, 'Restart uses the saved answer')
+  await page.getByRole('button', { name: 'Account', exact: true }).click()
   await page.getByRole('button', { name: 'Sign out and clear offline data' }).click()
   await page.getByRole('heading', { name: 'Connect TopLogger' }).waitFor()
   assert.equal(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('tlp:v1:')).length), 0)
   assert.equal(await page.evaluate(key => localStorage.getItem(key) !== null, adventureKey), true)
   assert.deepEqual(errors, [])
-  console.log('UI checks passed: login, all destinations, filters, history, community, gym switching, dark mode, 150% text, offline, expired session, logout. Screenshots contain test fixtures only.')
+  console.log('UI checks passed: login, all destinations, filters, history, community, gym switching, dark mode, 150% text, offline, expired session, update prompt, logout. Screenshots contain test fixtures only.')
 } finally { await browser.close(); await new Promise(done => server.close(done)) }
