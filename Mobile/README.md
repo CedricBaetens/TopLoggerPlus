@@ -13,6 +13,18 @@ adb install -r android/app/build/outputs/apk/release/app-release.apk
 adb shell am start -n com.toploggerplus.app/.MainActivity
 ```
 
+### Linux / devcontainer
+
+`.devcontainer/` provides Node 22 (npm 11), JDK 21 and Android SDK 36. Open the repo in VS Code with *Reopen in Container*, or build without VS Code:
+
+```bash
+docker build -t toploggerplus-dev .devcontainer
+docker run --rm -v "$PWD":/workspaces/TopLoggerPlus \
+  -w /workspaces/TopLoggerPlus toploggerplus-dev Mobile/scripts/build-android.sh --debug
+```
+
+Drop the `--debug` flag for a signed release build. Behind a TLS-inspecting proxy, copy its CA certificate into `.devcontainer/certs/*.crt` (ignored by git) before building the image. Gradle and npm caches are kept in the git-ignored `.cache/` folder at the repository root; Claude Code (devcontainer feature) keeps its login and sessions in `.cache/claude`, separate from the host's `~/.claude`; run `/login` once inside the container. Git ignores the host's config and VS Code's credential relay inside the devcontainer: identity lives in `.cache/git/config` and GitHub auth in `.cache/gh` (`gh auth login`, then `git config --global user.name/user.email`). The only state outside the repository is the Docker image (`docker rmi toploggerplus-dev && docker builder prune`).
+
 Personal release signing files are included in `Mobile/signing/` and used automatically. Keep this repository private: the key and password allow signing app updates. Signing JSON contains `keystore` (absolute or relative to the JSON file), `password`, and `alias`. Override with `-SigningFile`, or set `TLP_KEYSTORE`, `TLP_STORE_PASSWORD`, `TLP_KEY_ALIAS`, and optional `TLP_KEY_PASSWORD`. The build script rejects unsigned release builds.
 
 Output: `android/app/build/outputs/apk/release/app-release.apk`. Android 7+ (API 24), application ID `com.toploggerplus.app`. Debug builds use `com.toploggerplus.app.qa` so native tests cannot touch release credentials.

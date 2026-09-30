@@ -1,0 +1,32 @@
+{
+  "name": "TopLogger Plus (Android)",
+  "build": { "dockerfile": "Dockerfile" },
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "remoteUser": "node",
+  "workspaceFolder": "/workspaces/TopLoggerPlus",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/TopLoggerPlus,type=bind",
+  "postAttachCommand": ".devcontainer/git-setup.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "remote.autoForwardPortsSource": "process",
+        "remote.restoreForwardedPorts": false,
+        "git.terminalAuthentication": false,
+        "github.gitAuthentication": false
+      },
+      "extensions": ["Vue.volar"]
+    }
+  },
+  "containerEnv": {
+    "CLAUDE_CODE_USE_FOUNDRY": "1",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "claude-opus-5-5",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "claude-sonnet-5"
+  },
+  "remoteEnv": {
+    "ANTHROPIC_FOUNDRY_BASE_URL": "${localEnv:ANTHROPIC_FOUNDRY_BASE_URL}",
+    "ANTHROPIC_FOUNDRY_API_KEY": "${localEnv:ANTHROPIC_FOUNDRY_API_KEY}"
+  }
+}
