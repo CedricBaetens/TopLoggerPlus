@@ -89,6 +89,13 @@ export function dayLabel(value: string, now = new Date()): string {
   if (days === 1) return 'Yesterday'
   return day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(day.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) })
 }
+// An ascent counts while its day is within the last `days` days, so it leaves the window the day after.
+export function daysLeft(climbedAtDate: string, days: number, now = new Date()): number {
+  const today = new Date(now); today.setHours(0, 0, 0, 0)
+  const day = new Date(dateValue(climbedAtDate)); day.setHours(0, 0, 0, 0)
+  return days - Math.round((today.getTime() - day.getTime()) / 86400000)
+}
+export const daysLeftLabel = (left: number) => left <= 0 ? 'Expires today' : left === 1 ? '1 day left' : `${left} days left`
 export function dateLabel(value: string | null | undefined): string {
   return value && Number.isFinite(dateValue(value)) ? new Date(dateValue(value)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 }

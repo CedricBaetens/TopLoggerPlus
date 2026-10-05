@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { frenchGrade, gradeChoices, score, topTen, isActive, averageLabel, colorValue, defaultWallSelection, visibleLogs, logKind, dayLabel, topCount, type Route, type Ascent, type RouteLog } from '../app/utils/domain'
+import { frenchGrade, gradeChoices, score, topTen, isActive, averageLabel, colorValue, defaultWallSelection, visibleLogs, logKind, dayLabel, topCount, daysLeft, daysLeftLabel, type Route, type Ascent, type RouteLog } from '../app/utils/domain'
 import { cacheKey, clearCache, readCache, writeCache } from '../app/utils/cache'
 import { ApiError, TopLoggerClient, historyFailure, type Tokens, type Transport } from '../app/utils/toplogger'
 import { REFRESH, USER, ROUTES, DAYS, HISTORY, LOG_ASCENT, ROUTE_LOGS, UNSEND, GRADE_VOTE } from '../app/utils/queries'
@@ -174,6 +174,16 @@ test('Your log lists valid, genuine logs newest first with their kind', () => {
   assert.deepEqual(logs.map(logKind), ['Repeat', 'Onsight', 'Try'])
   assert.equal(dayLabel('2026-09-28', now), 'Today'); assert.equal(dayLabel('2026-09-27', now), 'Yesterday')
   assert.equal(dayLabel('2026-08-12', now), '12 Aug'); assert.equal(dayLabel('2025-08-12', now), '12 Aug 2025')
+})
+
+test('Days left matches the Top 10 window', () => {
+  for (const [date, left] of [['2026-09-28', 60], ['2026-07-31', 1], ['2026-07-30', 0]] as const) {
+    assert.equal(daysLeft(date, 60, now), left)
+    // Still ranked on its last day, gone the next.
+    assert.equal(topTen([route('r')], [log('r', 1, date)], 'gym', 60, now).length, 1)
+  }
+  assert.equal(topTen([route('r')], [log('r', 1, '2026-07-29')], 'gym', 60, now).length, 0)
+  assert.deepEqual([0, 1, 5].map(daysLeftLabel), ['Expires today', '1 day left', '5 days left'])
 })
 
 test('Top count needs a top and a numeric total', () => {
