@@ -2,7 +2,7 @@ import { emptyAdventure, loadAdventure, saveAdventure, updateReward, progress, n
 import { computed, reactive } from 'vue'
 import { ApiError, TopLoggerClient, type HistorySnapshot } from '../utils/toplogger'
 import { cacheKey, clearCache, readCache, writeCache } from '../utils/cache'
-import { dateValue, isActive, topTen, type Ascent, type Community, type Gym, type Route, type User } from '../utils/domain'
+import { dateValue, dayLabel, isActive, topTen, visibleLogs, type Ascent, type ClimbUser, type Community, type Gym, type Route, type RouteLog, type User } from '../utils/domain'
 import { COMMUNITY } from '../utils/queries'
 
 const client = new TopLoggerClient()
@@ -15,6 +15,7 @@ const state = reactive({
   selected: null as Route | null, community: null as Community | null,
   communityBusy: false, communityError: '', theme: 'system' as 'system' | 'light' | 'dark',
   ascentBusy: false, ascentError: '', ascentAction: '',
+  logs: null as RouteLog[] | null, logsBusy: false, logsError: '',
 })
 let requestId = 0, detailsId = 0
 const PROFILE = cacheKey('_profile', '_', 'user')
@@ -131,8 +132,9 @@ async function selectTab(tab: typeof state.tab): Promise<void> {
 async function openRoute(route: Route): Promise<void> {
   const id = ++detailsId
   state.selected = route; state.communityError = ''; state.communityBusy = true
-  state.ascentError = ''
+  state.ascentError = ''; state.logs = null
   if (!state.user) return
+  void loadLogs(route.id, id)
   const key = cacheKey(state.user.id, state.gymId, `community:${route.id}`)
   state.community = readCache<Community>(key)?.data ?? null
   try {
@@ -141,41 +143,76 @@ async function openRoute(route: Route): Promise<void> {
   } catch (error) { if (id === detailsId) state.communityError = report(error) }
   finally { if (id === detailsId) state.communityBusy = false }
 }
+async function loadLogs(routeId: string, id = detailsId): Promise<void> {
+  if (!state.user) return
+  state.logsBusy = true; state.logsError = ''
+  try {
+    const logs = await client.routeLogs(state.gymId, state.user.id, routeId)
+    if (id === detailsId) state.logs = visibleLogs(logs)
+  } catch (error) { if (id === detailsId) state.logsError = report(error) }
+  finally { if (id === detailsId) state.logsBusy = false }
+}
+function reward(userId: string, gymId: string, routeId: string, tickType: number): void {
+  const before = progress(state.adventure)
+  const next = updateReward(state.adventure, gymId, routeId, tickType)
+  const after = progress(next)
+  state.adventure = next
+  state.adventureWarning = saveAdventure(userId, next) ? '' : 'Adventure progress could not be saved on this device. It may be lost when you close the app.'
+  if (after.xp > before.xp) {
+    const unlocked = newlyUnlocked(before.achievements, after.achievements).map(item => item.name)
+    state.adventureMessage = `+${after.xp - before.xp} XP!${after.level > before.level ? ` Level ${after.level}!` : ''}${unlocked.length ? ` Achievement unlocked: ${unlocked.join(', ')}.` : ''}`
+  }
+}
+async function applyClimbUser(route: Route, climbUser: ClimbUser | null, userId: string, gymId: string, detail: number, removed: boolean): Promise<void> {
+  const updated = { ...route, climbUser }
+  state.routes = state.routes.map(item => item.id === route.id ? updated : item)
+  save(cacheKey(userId, gymId, 'routes'), { routes: state.routes, liveIds: state.liveRouteIds })
+  // Removing logs may change older days; invalidate only sessions containing this route.
+  state.historyReady = false; state.historyAt = ''
+  try {
+    localStorage.removeItem(cacheKey(userId, gymId, 'history'))
+    if (removed) {
+      const key = cacheKey(userId, gymId, 'historySessions')
+      const cached = readCache<HistorySnapshot>(key)?.data
+      if (Array.isArray(cached?.sessions)) save(key, { sessions: cached.sessions.filter(session => !session.logs.some(log => log.climbId === route.id)) })
+    }
+  }
+  catch { state.cacheWarning = 'Could not clear saved history. Refresh Top 10 to see your ascent.' }
+  if (detail === detailsId) state.selected = updated
+  if (state.tab === 'top') await loadHistory(++requestId)
+}
 async function submitAscent(tickType: number): Promise<void> {
   if (!state.selected || !state.user || !state.connected || state.needsLogin || state.busy || state.ascentBusy) return
   const route = state.selected, userId = state.user.id, gymId = state.gymId, detail = detailsId
-  state.ascentBusy = true; state.ascentError = ''; state.adventureMessage = ''; state.ascentAction = `${route.id}:ascent:${tickType}`
+  const repeat = tickType > 0 && !!route.climbUser?.tickType
+  if (tickType === -1) {
+    const tops = state.logs ? state.logs.filter(log => log.topped).length : route.climbUser?.totalTicks ?? 0
+    if (tops > 1 && !window.confirm(`Remove ${tops} ascents?`)) return
+  }
+  state.ascentBusy = true; state.ascentError = ''; state.adventureMessage = ''; state.ascentAction = `${route.id}:ascent:${repeat ? 'repeat' : tickType}`
   try {
     const climbUser = tickType === -1 ? await client.unsend(gymId, userId, route.id) : await client.logAscent(gymId, userId, route, tickType)
-    if (tickType === -1 || (tickType > 0 && !route.climbUser?.tickType && climbUser?.tickType === tickType)) {
-      const before = progress(state.adventure)
-      const next = updateReward(state.adventure, gymId, route.id, tickType)
-      const after = progress(next)
-      state.adventure = next
-      state.adventureWarning = saveAdventure(userId, next) ? '' : 'Adventure progress could not be saved on this device. It may be lost when you close the app.'
-      if (after.xp > before.xp) {
-        const unlocked = newlyUnlocked(before.achievements, after.achievements).map(item => item.name)
-        state.adventureMessage = `+${after.xp - before.xp} XP!${after.level > before.level ? ` Level ${after.level}!` : ''}${unlocked.length ? ` Achievement unlocked: ${unlocked.join(', ')}.` : ''}`
-      }
-    }
-    const updated = { ...route, climbUser }
-    state.routes = state.routes.map(item => item.id === route.id ? updated : item)
-    save(cacheKey(userId, gymId, 'routes'), { routes: state.routes, liveIds: state.liveRouteIds })
-    // Unsend may change older days; invalidate only sessions containing this route.
-    state.historyReady = false; state.historyAt = ''
-    try {
-      localStorage.removeItem(cacheKey(userId, gymId, 'history'))
-      if (tickType === -1) {
-        const key = cacheKey(userId, gymId, 'historySessions')
-        const cached = readCache<HistorySnapshot>(key)?.data
-        if (Array.isArray(cached?.sessions)) save(key, { sessions: cached.sessions.filter(session => !session.logs.some(log => log.climbId === route.id)) })
-      }
-    }
-    catch { state.cacheWarning = 'Could not clear saved history. Refresh Top 10 to see your ascent.' }
-    if (detail === detailsId) state.selected = updated
-    if (state.tab === 'top') await loadHistory(++requestId)
+    if (tickType === -1 || (tickType > 0 && !route.climbUser?.tickType && climbUser?.tickType === tickType)) reward(userId, gymId, route.id, tickType)
+    await applyClimbUser(route, climbUser, userId, gymId, detail, tickType === -1)
   } catch (error) { if (detail === detailsId) state.ascentError = report(error) }
-  finally { state.ascentBusy = false; state.ascentAction = '' }
+  finally { state.ascentBusy = false; state.ascentAction = ''; if (detail === detailsId) void loadLogs(route.id, detail) }
+}
+async function deleteLog(log: RouteLog): Promise<void> {
+  if (!state.selected || !state.user || !state.connected || state.needsLogin || state.busy || state.ascentBusy) return
+  const route = state.selected, userId = state.user.id, gymId = state.gymId, detail = detailsId
+  const warnings: string[] = []
+  // A route that left the wall cannot be logged again, so the deletion is permanent.
+  if (route.outAt && dateValue(route.outAt) <= Date.now()) warnings.push(`This will remove your ${log.topped ? 'ascent' : 'try'} from ${dayLabel(log.climbedAtDate).replace(/^(Today|Yesterday)$/, day => day.toLowerCase())}. This cannot be undone.`)
+  if (log.topped && !log.tickIndex && state.logs?.some(other => other.id !== log.id && other.topped)) warnings.push('Your next ascent will become your first top.')
+  if (warnings.length && !window.confirm(warnings.join(' '))) return
+  state.ascentBusy = true; state.ascentError = ''; state.adventureMessage = ''; state.ascentAction = `${route.id}:log:${log.id}`
+  try {
+    const climbUser = await client.deleteLog(gymId, userId, route.id, log.id)
+    // Same Adventure hook as Unsend, only when no top is left.
+    if (route.climbUser?.tickType && !climbUser?.tickType) reward(userId, gymId, route.id, -1)
+    await applyClimbUser(route, climbUser, userId, gymId, detail, true)
+  } catch (error) { if (detail === detailsId) state.ascentError = report(error) }
+  finally { state.ascentBusy = false; state.ascentAction = ''; if (detail === detailsId) void loadLogs(route.id, detail) }
 }
 async function submitGrade(grade: number): Promise<void> {
   if (!state.selected || !state.user || !state.connected || state.needsLogin || state.busy || state.ascentBusy || state.selected.climbUser?.grade === grade) return
@@ -198,7 +235,7 @@ async function submitGrade(grade: number): Promise<void> {
   } catch (error) { if (detail === detailsId) state.ascentError = report(error) }
   finally { state.ascentBusy = false; state.ascentAction = '' }
 }
-function closeRoute(): void { detailsId++; state.selected = null; state.community = null; state.ascentError = '' }
+function closeRoute(): void { detailsId++; state.selected = null; state.community = null; state.ascentError = ''; state.logs = null; state.logsError = ''; state.logsBusy = false }
 async function logout(): Promise<void> {
   if (state.ascentBusy) return
   requestId++; detailsId++; state.busy = false
@@ -223,5 +260,5 @@ const gyms = computed(() => [...new Map([...(state.user?.gym ? [state.user.gym] 
 export function useTopLogger() {
   return { state, gyms, adventureProgress: computed(() => progress(state.adventure)), resetAdventure, activeRoutes: computed(() => { const live = new Set(state.liveRouteIds); return state.routes.filter(route => live.has(route.id) && isActive(route)) }),
     ranked: computed(() => state.historyReady ? topTen(state.routes, state.history, state.gymId, state.days) : []),
-    initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, submitAscent, submitGrade, logout, clearSaved }
+    initialize, connect, refresh, selectGym, selectTab, openRoute, closeRoute, loadLogs, submitAscent, deleteLog, submitGrade, logout, clearSaved }
 }

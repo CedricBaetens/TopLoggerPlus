@@ -40,7 +40,7 @@ try {
   })
   const page = await context.newPage(), errors = []
   page.on('pageerror', error => errors.push(error.message))
-  let offline = false, expired = false, refreshes = 0, ascentWrites = 0, ascentDeletes = 0, gradeVotes = 0, historyReads = 0, topperReads = 0
+  let offline = false, expired = false, refreshes = 0, ascentWrites = 0, ascentDeletes = 0, deletedIds = [], gradeVotes = 0, historyReads = 0, topperReads = 0
   let holdWrite = false, writeStarted
   const pendingWrite = new Promise(resolve => { writeStarted = resolve })
   const today = new Date().toISOString().slice(0, 10), future = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10)
@@ -48,6 +48,14 @@ try {
   const routes = [route('a', 617, '#c46935', '12', 2, future), route('b', 650, '#667aac', '18', 0, future), route('c', 700, '#646b64', '24', null)]
   routes[1].wall.nameLoc = 'Side wall'; routes[2].wall.nameLoc = 'Other wall'
   const removed = { ...route('archived', 683, '#667aac', '9', 3), outAt: today }
+  // Route c's log; its climbUser is recalculated from it like TopLogger does.
+  let cLogs = [], logSeq = 0
+  const syncC = () => {
+    const tops = cLogs.filter(log => log.topped)
+    tops.forEach((log, index) => { log.tickIndex = index })
+    routes[2].climbUser = cLogs.length ? { grade: routes[2].climbUser?.grade ?? null, tickType: tops[0]?.tickType ?? 0, totalTries: cLogs.length, totalTicks: tops.length, triedFirstAtDate: today, tickedFirstAtDate: tops.length ? today : null } : null
+    return { climbUsers: [{ climbId: 'c', ...(routes[2].climbUser ?? { grade: null, tickType: 0, totalTries: 0, totalTicks: 0, triedFirstAtDate: null, tickedFirstAtDate: null }) }] }
+  }
   const user = { id: 'test-account', fullName: 'Test Climber', gym: { id: 'gym', name: 'Test Climbing Gym' }, gymUserFavorites: [{ gym: { id: 'second', name: 'Second Gym' } }] }
   await page.route('https://app.toplogger.nu/graphql', async request => {
     if (offline) { await request.abort(); return }
@@ -59,29 +67,26 @@ try {
       data = { climbUsers: [{ climbId: 'c', ...routes[2].climbUser }] }
     }
     else if (query.includes('PlusUnsend')) {
-      ascentDeletes++; assert.deepEqual(variables.ids, ['c-log']); assert.equal(variables.userId, user.id)
-      routes[2].climbUser = null
-      data = { climbUsers: [{ climbId: 'c', grade: null, tickType: 0, totalTries: 0, triedFirstAtDate: null, tickedFirstAtDate: null }] }
+      ascentDeletes++; assert.equal(variables.userId, user.id); assert(variables.ids.every(id => cLogs.some(log => log.id === id)))
+      deletedIds.push(...variables.ids); cLogs = cLogs.filter(log => !variables.ids.includes(log.id))
+      data = syncC()
     }
     else if (query.includes('PlusLogAscent')) {
       if (holdWrite) { holdWrite = false; await new Promise(resume => writeStarted(resume)) }
       ascentWrites++
       assert.deepEqual(variables.climbIds, ['c']); assert.equal(variables.userId, user.id); assert.equal(variables.gymId, 'gym')
       assert.equal(variables.climbLogTriesBefore, 0)
-      if (variables.climbLogData.topped) {
-        assert.equal(variables.climbLogData.foreknowledge, true)
-        routes[2].climbUser = { grade: null, tickType: 2, totalTries: 1, triedFirstAtDate: today, tickedFirstAtDate: today }
-      } else {
-        assert.equal(variables.climbLogData.foreknowledge, false)
-        const previous = routes[2].climbUser ?? { grade: null, tickType: 0, totalTries: 0, triedFirstAtDate: today, tickedFirstAtDate: null }
-        routes[2].climbUser = { ...previous, totalTries: previous.totalTries + 1 }
-      }
-      data = { climbUsers: [{ climbId: 'c', ...routes[2].climbUser }] }
+      if (variables.climbLogData.topped) assert.equal(variables.climbLogData.foreknowledge, true)
+      else assert.equal(variables.climbLogData.foreknowledge, false)
+      // The fixture's first top is a Flash; later tops are Redpoint repeats.
+      const tickType = !variables.climbLogData.topped ? null : routes[2].climbUser?.tickType ? 1 : 2
+      cLogs.push({ id: `c-log-${++logSeq}`, gymId: 'gym', climbId: 'c', climbedAtDate: today, valid: true, topped: variables.climbLogData.topped, ticked: variables.climbLogData.topped, tickType, tickIndex: null, tryIndex: logSeq, lead: variables.climbLogData.lead, autoAdded: false })
+      data = syncC()
     }
     else if (query.includes('mutation')) { refreshes++; data = { tokens: { access: { token: 'test-access', expiresAt: '2099-01-01T00:00:00Z' }, refresh: { token: 'test.refresh.signature', expiresAt: '2099-01-01T00:00:00Z' } } } }
     else if (expired) { await request.fulfill({ json: { errors: [{ extensions: { code: 'UNAUTHENTICATED' } }] } }); return }
     else if (query.includes('PlusUser')) data = { userMe: user }
-    else if (query.includes('PlusRouteLogs')) data = { climbLogs: { data: [{ id: 'c-log', gymId: 'gym', climbId: 'c', valid: true, topped: true, autoAdded: false }], pagination: { total: 1, page: 1, perPage: 100 } } }
+    else if (query.includes('PlusRouteLogs')) { const logs = variables.climbId === 'c' ? cLogs : []; data = { climbLogs: { data: logs, pagination: { total: logs.length, page: 1, perPage: 100 } } } }
     else if (query.includes('PlusRoutes')) { const list = variables.gymId === 'gym' ? routes : [route('second-route', 583, '#c46935', '3', 1)]; data = { climbs: { data: list, pagination: { total: list.length, page: 1, perPage: 200 } } } }
     else if (query.includes('PlusDays')) data = { climbDaysPaginated: { data: [{ id: 'day', gymId: 'gym', statsAtDate: today }], pagination: { total: 1, page: 1, perPage: 200 } } }
     else if (query.includes('PlusHistory')) { historyReads++; const logs = [routes[0], removed, ...(routes[2].climbUser ? [routes[2]] : [])].map(item => ({ id: `${item.id}-log`, climbId: item.id, gymId: 'gym', climbType: 'route', tickType: item.climbUser.tickType, climbedAtDate: today, valid: true, topped: true, ticked: true })); data = { climbLogs: { data: logs, pagination: { total: logs.length, page: 1, perPage: 200 } } } }
@@ -173,8 +178,19 @@ try {
   assert.equal(await gradeButtons.nth(1).getAttribute('aria-pressed'), 'true')
   assert.equal(historyReads, beforeGradeHistory); assert.equal(topperReads, beforeGradeToppers)
   await screenshot('07-grade-vote.png')
+  assert.deepEqual(await page.locator('.route-logs li strong').allTextContents(), ['Flash'])
+  await page.getByRole('button', { name: 'Repeat', exact: true }).click()
+  await page.getByRole('button', { name: 'Delete Repeat from Today' }).waitFor()
+  assert.deepEqual(await page.locator('.route-logs li strong').allTextContents(), ['Repeat', 'Flash'])
+  assert.equal(await page.getByRole('button', { name: 'Flash', exact: true }).getAttribute('aria-pressed'), 'true')
+  assert.equal(await page.getByText(/XP!/).count(), 0, 'Repeats earn no XP')
+  let dialogMessage = ''
+  page.once('dialog', dialog => { dialogMessage = dialog.message(); void dialog.dismiss() })
+  await page.getByRole('button', { name: 'Delete Flash from Today' }).click()
+  assert.equal(dialogMessage, 'Your next ascent will become your first top.'); assert.equal(ascentDeletes, 0)
+  await screenshot('07b-repeat.png')
   await page.getByRole('button', { name: 'Back to Routes' }).click()
-  assert.equal(await page.getByRole('button', { name: /Rope 24.*Flash/ }).count(), 1)
+  assert.equal(await page.getByRole('button', { name: /Rope 24.*2 ascents.*Flash/ }).count(), 1)
   await page.getByRole('button', { name: 'Adventure', exact: true }).click()
   await page.getByRole('heading', { name: 'Level 1', exact: true }).waitFor()
   assert.equal(await page.locator('.achievement-list .topped').count(), 3)
@@ -185,10 +201,14 @@ try {
   await page.getByRole('button', { name: /Rope 24.*Flash/ }).waitFor()
   assert.equal(await page.locator('.route-card').count(), 3)
   await page.getByRole('button', { name: /Rope 24.*Flash/ }).click()
+  await page.getByRole('button', { name: 'Delete Repeat from Today' }).waitFor()
+  page.once('dialog', dialog => { dialogMessage = dialog.message(); void dialog.accept() })
   await page.getByRole('button', { name: 'Unsend', exact: true }).click()
   await page.getByRole('button', { name: 'Unsend', exact: true }).waitFor({ state: 'detached' })
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem(Object.keys(localStorage).find(key => key.startsWith('tlp:adventure:v1:')))).rewards.length), 0)
+  assert.equal(dialogMessage, 'Remove 2 ascents?'); assert.deepEqual(deletedIds, ['c-log-1', 'c-log-2'])
   assert.equal(ascentDeletes, 1); assert.equal(await page.getByRole('button', { name: 'Unsend', exact: true }).count(), 0)
+  await page.getByText('No logs yet.', { exact: true }).waitFor()
   assert(await page.getByRole('button', { name: 'Flash', exact: true }).isEnabled())
   await page.getByRole('button', { name: 'Try', exact: true }).click()
   await page.getByText('1 try', { exact: true }).waitFor()
@@ -196,8 +216,11 @@ try {
   assert(await page.getByRole('button', { name: 'Onsight', exact: true }).isDisabled())
   await page.getByRole('button', { name: 'Try', exact: true }).click()
   await page.getByText('2 tries', { exact: true }).waitFor()
-  assert.equal(ascentWrites, 3)
+  assert.equal(ascentWrites, 4)
   await screenshot('08-tries.png')
+  await page.getByRole('button', { name: 'Delete Try from Today' }).first().click()
+  await page.getByText('1 try', { exact: true }).waitFor()
+  assert.equal(ascentDeletes, 2); assert.equal(await page.locator('.route-logs li').count(), 1)
   await page.getByRole('button', { name: 'Back to Top 10' }).click()
   assert.equal(await page.locator('.route-card').count(), 2)
   await page.getByRole('button', { name: 'Routes', exact: true }).click()

@@ -4,7 +4,7 @@ export function defaultWallSelection(gymName: string, walls: string[]): string[]
 }
 export interface User { id: string; fullName: string; gym: Gym | null; gymUserFavorites: { gym: Gym }[] }
 export interface ClimbUser {
-  grade: number | null; tickType: number; totalTries: number
+  grade: number | null; tickType: number; totalTries: number; totalTicks?: number | null
   triedFirstAtDate: string | null; tickedFirstAtDate: string | null
 }
 export interface Route {
@@ -17,6 +17,10 @@ export interface Route {
 export interface Ascent {
   id: string; gymId: string; climbId: string; climbType: string; tickType: number
   climbedAtDate: string; valid: boolean; ticked: boolean; topped: boolean
+}
+export interface RouteLog {
+  id: string; gymId: string; climbId: string; climbedAtDate: string; valid: boolean; topped: boolean; ticked: boolean | null
+  tickType: number | null; tickIndex: number | null; tryIndex: number | null; lead: boolean | null; autoAdded: boolean
 }
 export interface RankedRoute { route: Route; ascent: Ascent; score: number }
 export const FRENCH_GRADES = [200, 300, 333, 367, 400, 433, 467, ...Array.from({ length: 5 }, (_, index) => [0, 17, 33, 50, 67, 83].map(offset => (index + 5) * 100 + offset)).flat()].filter(grade => grade <= 950)
@@ -65,6 +69,26 @@ export function topTen(routes: Route[], logs: Ascent[], gymId: string, days: num
   return [...best.values()].sort((a, b) => b.score - a.score || dateValue(b.ascent.climbedAtDate) - dateValue(a.ascent.climbedAtDate) || a.route.id.localeCompare(b.route.id)).slice(0, 10)
 }
 export const ascentLabel = (tickType?: number) => ['Not topped', 'Redpoint', 'Flash', 'Onsight'][tickType ?? 0] ?? 'Not topped'
+// Number of tops including repeats; a missing or malformed total counts as none.
+export const topCount = (climbUser?: ClimbUser | null) => climbUser?.tickType && Number.isInteger(climbUser.totalTicks) ? climbUser.totalTicks! : 0
+// Your log: newest first, without invalid logs or the attempts TopLogger generates for a send.
+export function visibleLogs(logs: RouteLog[]): RouteLog[] {
+  return logs.filter(log => log.valid && !log.autoAdded).sort((a, b) => dateValue(b.climbedAtDate) - dateValue(a.climbedAtDate) || (b.tryIndex ?? 0) - (a.tryIndex ?? 0))
+}
+export function logKind(log: RouteLog): string {
+  if (!log.topped) return 'Try'
+  return (log.tickIndex ?? 0) > 0 ? 'Repeat' : ascentLabel(log.tickType ?? 1)
+}
+export function dayLabel(value: string, now = new Date()): string {
+  const at = dateValue(value)
+  if (!Number.isFinite(at)) return '—'
+  const today = new Date(now); today.setHours(0, 0, 0, 0)
+  const day = new Date(at); day.setHours(0, 0, 0, 0)
+  const days = Math.round((today.getTime() - day.getTime()) / 86400000)
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return day.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(day.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) })
+}
 export function dateLabel(value: string | null | undefined): string {
   return value && Number.isFinite(dateValue(value)) ? new Date(dateValue(value)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 }

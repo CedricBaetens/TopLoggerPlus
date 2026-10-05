@@ -1,5 +1,5 @@
 import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core'
-import type { Ascent, ClimbUser, Community, Route, User } from './domain'
+import type { Ascent, ClimbUser, Community, Route, RouteLog, User } from './domain'
 import { FRENCH_GRADES } from './domain'
 import { REFRESH, USER, ROUTES, ROUTE, DAYS, HISTORY, COMMUNITY, TOPPERS, LOG_ASCENT, ROUTE_LOGS, UNSEND, GRADE_VOTE } from './queries'
 
@@ -180,21 +180,33 @@ export class TopLoggerClient {
       throw error
     }
   }
-  async unsend(gymId: string, userId: string, routeId: string): Promise<ClimbUser | null> {
-    const logs = await this.pages<{ id: string; gymId: string; climbId: string; valid: boolean; topped: boolean; autoAdded: boolean }>(ROUTE_LOGS, 'climbLogs', { gymId, userId, climbId: routeId })
-    if (logs.some(log => !log || typeof log.id !== 'string' || log.gymId !== gymId || log.climbId !== routeId || typeof log.valid !== 'boolean' || typeof log.topped !== 'boolean' || typeof log.autoAdded !== 'boolean')) throw new ApiError('api', 'Could not verify this route’s ascents. Refresh and try again.')
-    // Match the official Redpoint uncheck: keep genuine attempts, remove sends and generated attempts.
-    const ids = logs.filter(log => log.valid && (log.topped || log.autoAdded)).map(log => log.id)
-    if (!ids.length) return (await this.route(gymId, routeId, userId)).climbUser
+  async routeLogs(gymId: string, userId: string, routeId: string): Promise<RouteLog[]> {
+    const logs = await this.pages<RouteLog>(ROUTE_LOGS, 'climbLogs', { gymId, userId, climbId: routeId })
+    if (logs.some(log => !log || typeof log.id !== 'string' || log.gymId !== gymId || log.climbId !== routeId || typeof log.valid !== 'boolean' || typeof log.topped !== 'boolean' || typeof log.autoAdded !== 'boolean' || !Number.isFinite(Date.parse(log.climbedAtDate)))) throw new ApiError('api', 'Could not verify this route’s ascents. Refresh and try again.')
+    return logs
+  }
+  private async deleteLogs(gymId: string, userId: string, routeId: string, ids: string[], failure: string): Promise<ClimbUser | null> {
     try {
       const data = await this.query<{ climbUsers: (ClimbUser & { climbId: string })[] }>(UNSEND, { gymId, userId, ids })
       const updated = data.climbUsers?.find(item => item.climbId === routeId)
       if (updated && Number.isFinite(updated.tickType) && Number.isFinite(updated.totalTries)) return updated
       return (await this.route(gymId, routeId, userId)).climbUser
     } catch (error) {
-      if (!(error instanceof ApiError) || error.kind !== 'auth') throw new ApiError('network', 'Could not confirm whether the sends were removed. Check TopLogger before trying again.')
+      if (!(error instanceof ApiError) || error.kind !== 'auth') throw new ApiError('network', failure)
       throw error
     }
+  }
+  async unsend(gymId: string, userId: string, routeId: string): Promise<ClimbUser | null> {
+    const logs = await this.routeLogs(gymId, userId, routeId)
+    // Match the official Redpoint uncheck: keep genuine attempts, remove sends and generated attempts.
+    const ids = logs.filter(log => log.valid && (log.topped || log.autoAdded)).map(log => log.id)
+    if (!ids.length) return (await this.route(gymId, routeId, userId)).climbUser
+    return this.deleteLogs(gymId, userId, routeId, ids, 'Could not confirm whether the sends were removed. Check TopLogger before trying again.')
+  }
+  async deleteLog(gymId: string, userId: string, routeId: string, logId: string): Promise<ClimbUser | null> {
+    // Only delete a log TopLogger currently lists for this account and route.
+    if (!(await this.routeLogs(gymId, userId, routeId)).some(log => log.id === logId)) throw new ApiError('api', 'This log is no longer on TopLogger. Refresh and try again.')
+    return this.deleteLogs(gymId, userId, routeId, [logId], 'Could not confirm whether the log was removed. Check TopLogger before trying again.')
   }
   async voteGrade(gymId: string, userId: string, routeId: string, grade: number): Promise<ClimbUser> {
     if (!FRENCH_GRADES.includes(grade)) throw new ApiError('api', 'Choose a valid French grade.')

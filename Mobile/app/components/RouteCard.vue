@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ascentLabel, colorValue, dateLabel, frenchGrade, type RankedRoute, type Route } from '../utils/domain'
+import { ascentLabel, colorValue, dateLabel, frenchGrade, topCount, type RankedRoute, type Route } from '../utils/domain'
 const props = defineProps<{ route: Route; rank?: number; ranked?: RankedRoute }>()
 const tickType = computed(() => props.ranked?.ascent.tickType ?? props.route.climbUser?.tickType ?? 0)
 const done = computed(() => tickType.value > 0)
+const tops = computed(() => topCount(props.route.climbUser))
 defineEmits<{ open: [route: Route] }>()
 </script>
 <template>
@@ -15,6 +16,7 @@ defineEmits<{ open: [route: Route] }>()
       <span class="route-meta text-[.72rem] text-muted [overflow-wrap:anywhere]">{{ route.wall?.nameLoc || 'Wall unknown' }} <span aria-hidden="true">·</span> {{ route.holdColor?.nameLoc || 'Color unknown' }}</span>
       <span v-if="ranked" class="route-meta text-[.72rem] text-muted [overflow-wrap:anywhere]">{{ dateLabel(ranked.ascent.climbedAtDate) }} · {{ ranked.score }} points</span>
     </span>
+    <span v-if="tops > 1 && !ranked" class="repeat-count shrink-0 text-[.72rem] text-muted tabular-nums"><span aria-hidden="true">×{{ tops }}</span><span class="sr-only">{{ tops }} ascents</span></span>
     <span class="flex items-center justify-center w-9.5 h-9.5 shrink-0 p-1.5 border border-solid border-line rounded-[5px] bg-bg text-ink [&.done]:text-white [&.done]:bg-done-badge [&.done]:border-success [&.attempted]:text-gold [&_svg]:w-5.5 [&_svg]:h-5.5 [&_svg]:stroke-[3] [&.done_svg]:w-6.25 [&.done_svg]:h-6.25" :class="['route-status', { done, attempted: !done && !!route.climbUser?.totalTries }]"><AppIcon v-if="done" :name="tickType === 3 ? 'doubleCheck' : tickType === 2 ? 'flash' : 'check'" /><span v-else class="status-circle w-5.5 h-5.5 [border:1.5px_solid_currentColor] rounded-full shrink-0" aria-hidden="true" /><span class="sr-only">{{ done ? ascentLabel(tickType) : route.climbUser?.totalTries ? 'Attempted' : 'To do' }}</span></span>
   </button>
 </template>
